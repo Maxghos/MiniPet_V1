@@ -1,0 +1,32 @@
+name: Firmware y comportamiento
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: platformio-${{ runner.os }}-${{ hashFiles('platformio.ini', 'boards/*.json') }}
+      - run: pip install -r tools/requirements.txt
+      - run: pio pkg install -e esp32s3
+      - run: bash tools/test_host.sh
+      - run: pio run -e esp32s3 -e esp32s3-button
+      - run: bash tools/preview.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: minipet-firmware-y-caras
+          path: |
+            .pio/build/esp32s3/firmware.bin
+            .pio/build/esp32s3/bootloader.bin
+            .pio/build/esp32s3/partitions.bin
+            .pio/build/esp32s3-button/firmware.bin
+            docs/caras.html
