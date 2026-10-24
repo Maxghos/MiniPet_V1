@@ -16,8 +16,16 @@ struct WeatherData {
     uint16_t code = 0;
     uint32_t fetchedMs = 0;
     int64_t fetchedEpoch = 0;
+    int64_t observedEpoch = 0;
+    uint32_t revision = 0; // increments only after a successful network update
     ForecastDay days[3]{};
 };
+
+inline bool weatherFresh(const WeatherData& w, uint32_t now) {
+    return w.valid && w.online && uint32_t(now-w.fetchedMs)<=3600000 &&
+        w.observedEpoch>0 && w.fetchedEpoch>=w.observedEpoch-300 &&
+        w.fetchedEpoch-w.observedEpoch<=5400;
+}
 
 // Human-readable labels for WMO weather codes (ASCII for the 6x8 OLED font).
 inline const char* weatherLabel(unsigned code) {

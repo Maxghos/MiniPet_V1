@@ -4,10 +4,12 @@
 #include <time.h>
 #include "BoardConfig.h"
 #include "PetCore.h"
+#include "SettingsMigration.h"
 #include "Sensors.h"
 #include "Screen.h"
 #include "NetworkService.h"
 #include "Messages.h"
+#include "WeatherBehavior.h"
 
 namespace {
 pet::Settings settings;
@@ -17,133 +19,176 @@ pet::HoldGesture gesture;
 pet::Presence presence;
 pet::Personality personality;
 pet::Query query;
+pet::AmbientDirector ambient;
+pet::WeatherChanges weatherChanges;
 Sensors sensors;
 Screen screen;
 NetworkService network;
 messages::Picker picker;
-bool screenReady = false, networkReady = false;
-uint32_t lastFrame = 0, messageAt = 0, lastJokeAt = 0;
-bool joked = false;
-const char* message = nullptr;
-const char* jokeMessage = nullptr;
-uint8_t nextWeatherPage = 0, queryWeatherPage = 0;
-uint32_t lastDistanceAt = 0;
-float lastDistance = 0;
-bool hadDistance = false;
+WeatherData weather,queryWeather,ambientWeather;
+bool screenReady=false,networkReady=false;
+uint32_t lastFrame=0,messageAt=0,messageDuration=0,lastJokeAt=0,lastWeatherPoll=0;
+uint32_t ambientAt=0;
+bool joked=false,ambientReaction=false;
+const char* message=nullptr;
+const char* jokeMessage=nullptr;
+uint8_t nextWeatherPage=0,queryWeatherPage=0;
+uint32_t lastDistanceAt=0;
+float lastDistance=0;
+bool hadDistance=false;
 
 void loadSettings() {
     Preferences p;
     if (!p.begin("minipet",true)) return;
-    if (p.getUInt("version",0)==1 && p.getBytesLength("settings")==sizeof(settings))
-        p.getBytes("settings",&settings,sizeof(settings));
+    const auto version=p.getUInt("version",0);
+    const auto size=p.getBytesLength("settings");
+    std::array<uint8_t,sizeof(pet::Settings)> data{};
+    if ((size==pet::legacySettingsSize || size==sizeof(pet::Settings)) && p.getBytes("settings",data.data(),size)==size)
+        pet::restoreSettings(version,data.data(),size,settings);
     p.end(); settings.sanitize();
 }
 bool saveSettings() {
     Preferences p;
     if (!p.begin("minipet",false)) return false;
-    bool ok = p.putBytes("settings",&settings,sizeof(settings))==sizeof(settings);
-    ok = p.putUInt("version",1)==sizeof(uint32_t) && ok; p.end(); return ok;
+    bool ok=p.putBytes("settings",&settings,sizeof(settings))==sizeof(settings);
+    ok=p.putUInt("version",2)==sizeof(uint32_t) && ok;
+    p.end(); return ok;
 }
 bool quietNow() {
-    time_t now = time(nullptr);
-    if (now < 1704067200) return false;
+    time_t now=time(nullptr);
+    if (now<1704067200) return false;
     tm local{}; localtime_r(&now,&local);
     return settings.quiet(local.tm_hour);
 }
 void startQuery(uint32_t now, bool quiet) {
     personality.interact(now,settings);
-    bool joke = !quiet && settings.messages && settings.humor >= 40 &&
-        (!joked || pet::elapsed(now,lastJokeAt)>=60000) && esp_random()%100 < settings.humor;
-    query.start(now,settings,joke);
-    if (query.active()) {
-        queryWeatherPage = settings.weatherView==3 ? nextWeatherPage++%3 : settings.weatherView;
-        if (query.joke()) {
-            jokeMessage = picker.pick(esp_random(),true,true);
-            lastJokeAt = now; joked = true;
-            personality.react(pet::Mood::Annoyed,now,1600);
-        }
+    message=nullptr; ambientReaction=false;
+    queryWeather=weather;
+    if (settings.modules&pet::Weather)
+        queryWeatherPage=settings.weatherView==3 ? nextWeatherPage++%3 : settings.weatherView;
+    const bool currentWeather=(settings.modules&pet::Weather) && queryWeatherPage!=2 && weatherFresh(queryWeather,now);
+    const bool joke=!quiet && settings.messages && settings.humor>=40 &&
+        (!joked || pet::elapsed(now,lastJokeAt)>=60000) && esp_random()%100<settings.humor;
+    query.start(now,settings,joke,currentWeather && !quiet);
+    if (query.joke()) {
+        jokeMessage=currentWeather ? picker.weather(queryWeather,esp_random()) : picker.pick(esp_random(),true,true);
+        lastJokeAt=now; joked=true;
+        personality.react(pet::Mood::Smug,now,query.totalDuration()+2200);
     }
-    message = nullptr;
+    ambient.note(now,query.totalDuration(),settings,esp_random(),false);
 }
 pet::View homeView(uint32_t now) {
-    if (settings.modules & pet::Assistant) return pet::View::Pet;
-    if ((settings.modules & (pet::Clock|pet::Weather))==(pet::Clock|pet::Weather)) {
-        unsigned weatherPages = settings.weatherView==3 ? 3 : 1;
-        unsigned part = (now/(settings.pageSeconds*1000u))%(weatherPages+1);
-        return part < weatherPages ? pet::View::Weather : pet::View::Clock;
+    if (settings.modules&pet::Assistant) return pet::View::Pet;
+    if ((settings.modules&(pet::Clock|pet::Weather))==(pet::Clock|pet::Weather)) {
+        const unsigned weatherPages=settings.weatherView==3 ? 3 : 1;
+        const unsigned part=(now/(settings.pageSeconds*1000u))%(weatherPages+1);
+        return part<weatherPages ? pet::View::Weather : pet::View::Clock;
     }
-    return settings.modules & pet::Weather ? pet::View::Weather : pet::View::Clock;
+    return settings.modules&pet::Weather ? pet::View::Weather : pet::View::Clock;
+}
+void showMessage(const char* value, uint32_t now, pet::Mood mood) {
+    message=value; messageAt=now; messageDuration=pet::text::wrap(value).duration();
+    personality.react(mood,now,messageDuration+2200);
+    ambient.note(now,messageDuration,settings,esp_random());
 }
 }
 void setup() {
     Serial.begin(115200);
     loadSettings(); sensors.begin();
-    screenReady = screen.begin();
-    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet", "Hola, Puente Alto!"); screen.show(); }
+    screenReady=screen.begin();
+    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet V2","Hola, Puente Alto!"); screen.show(); }
     else Serial.println("OLED no disponible: revisar alimentacion, SDA 8, SCL 9 y direccion 0x3C");
-    personality.begin(millis()); gesture.reset(millis());
-    networkReady = network.begin();
+    const uint32_t now=millis();
+    personality.begin(now); gesture.reset(now); ambient.begin(now);
+    networkReady=network.begin();
     if (!networkReady) Serial.println("No se pudo iniciar servicio de red");
-    Serial.println("MiniPet iniciado. Boton: ajustes. Gesto: 50-80 cm durante 5 s (configurable).");
+    Serial.println("MiniPet V2 iniciado. Boton: ajustes. Gesto: 50-80 cm durante 5 s (configurable).");
 }
 void loop() {
-    const uint32_t now = millis();
-    const bool quiet = quietNow();
-    const pet::Press press = button.update(sensors.touch(),now);
-    if (networkReady) network.poll();
-    if (press != pet::Press::None) {
+    const uint32_t now=millis();
+    const bool quiet=quietNow();
+    const pet::Press press=button.update(sensors.touch(),now);
+    if (networkReady) {
+        network.poll();
+        if (pet::elapsed(now,lastWeatherPoll)>=250) { weather=network.weather(); lastWeatherPoll=now; }
+    }
+    if (press!=pet::Press::None) {
         if (network.portalActive()) network.stopPortal();
         else if (!menu.active) {
-            menu.open(settings); query.cancel(); message = nullptr;
+            menu.open(settings); query.cancel(); message=nullptr; ambientReaction=false;
         } else {
-            auto action = menu.input(press);
-            if (action == pet::Menu::Action::Save) {
-                auto previous = settings; settings = menu.draft;
+            const auto action=menu.input(press);
+            if (action==pet::Menu::Action::Save) {
+                const auto previous=settings; settings=menu.draft;
                 if (saveSettings()) { if (screenReady) screen.brightness(settings.brightness); Serial.println("Ajustes guardados"); }
-                else {
-                    settings = previous; menu.open(menu.draft);
-                    Serial.println("No se pudo guardar ajustes");
-                }
-            } else if (action == pet::Menu::Action::Portal && networkReady) network.startPortal();
+                else { settings=previous; menu.open(menu.draft); Serial.println("No se pudo guardar ajustes"); }
+            } else if (action==pet::Menu::Action::Portal && networkReady) network.startPortal();
         }
         personality.interact(now,settings);
-        gesture.reset(now);
+        gesture.reset(now); ambient.note(now,0,settings,esp_random(),false);
     }
     if (sensors.poll(now)) {
         presence.update(now,sensors.valid,sensors.cm,settings.presenceCm);
         if (sensors.valid && hadDistance && pet::elapsed(now,lastDistanceAt)<350 &&
             lastDistance-sensors.cm>25 && sensors.cm<45 && !menu.active && !query.active())
             personality.react(pet::Mood::Shocked,now,1500);
-        hadDistance = sensors.valid;
-        if (sensors.valid) { lastDistance = sensors.cm; lastDistanceAt = now; }
+        hadDistance=sensors.valid;
+        if (sensors.valid) { lastDistance=sensors.cm; lastDistanceAt=now; }
         if (menu.active || network.portalActive() || query.active()) gesture.reset(now);
         else if (gesture.update(now,sensors.valid,sensors.cm,settings)) startQuery(now,quiet);
     }
-    const bool motion = sensors.motion(now);
-    if (personality.update(now,presence.present(),motion && !menu.active && !query.active(),quiet,
-        !menu.active && !query.active() && !network.portalActive(),settings,esp_random())) {
-        message = picker.pick(esp_random(),presence.present()); messageAt = now;
-    }
+    personality.update(now,presence.present(),sensors.motion(now) && !menu.active && !query.active(),settings);
     query.update(now);
-    if (message && pet::elapsed(now,messageAt)>=3500) message = nullptr;
+    if (message && pet::elapsed(now,messageAt)>=messageDuration) message=nullptr;
+    if (ambientReaction && pet::elapsed(now,ambientAt)>=2000) ambientReaction=false;
+    const auto mood=personality.mood(now);
+    const bool awake=mood!=pet::Mood::Sleeping;
+    const bool notices=awake && !quiet && settings.messages && settings.weatherNotices &&
+        (settings.modules&(pet::Assistant|pet::Weather))==(pet::Assistant|pet::Weather);
+    weatherChanges.observe(weather,now,notices);
+    const bool allow=awake && !quiet && !menu.active && !network.portalActive() && !query.active() &&
+        !message && !ambientReaction && gesture.progress(now,settings)==0 &&
+        mood!=pet::Mood::Shocked && mood!=pet::Mood::Attentive && homeView(now)==pet::View::Pet;
+    const auto event=ambient.poll(now,settings,allow,personality.attentionDue(now,presence.present(),settings),
+        weatherFresh(weather,now),esp_random(),weatherChanges.pending(now));
+    switch (event) {
+    case pet::Ambient::Phrase:
+        showMessage(picker.random(esp_random()),now,settings.humor>=70 ? pet::Mood::Smug : settings.humor>=40 ? pet::Mood::Happy : pet::Mood::Calm);
+        break;
+    case pet::Ambient::Reminder:
+        personality.remind(now,settings);
+        showMessage(picker.pick(esp_random(),presence.present()),now,personality.mood(now));
+        break;
+    case pet::Ambient::Weather:
+        ambientReaction=true; ambientAt=now; ambientWeather=weather;
+        ambient.note(now,2000,settings,esp_random());
+        break;
+    case pet::Ambient::WeatherChange:
+        weatherChanges.consume(); showMessage("El clima ahora indica lluvia",now,pet::Mood::Curious);
+        break;
+    default: break;
+    }
     if (screenReady && pet::elapsed(now,lastFrame)>=board::frameMs) {
-        lastFrame = now;
+        lastFrame=now;
         if (network.portalActive()) screen.portal(network.apName(),network.apPassword(),network.connected());
         else if (menu.active) screen.menu(menu,sensors.valid,sensors.cm);
-        else if (query.joke()) screen.message(jokeMessage ? jokeMessage : "Ya voy...");
-        else if (message && (settings.modules & pet::Assistant)) screen.message(message);
+        else if (query.joke()) screen.message(jokeMessage ? jokeMessage : "Ya voy...",query.stageAge(now));
+        else if (query.active()) {
+            if (query.view()==pet::View::WeatherReaction) screen.weatherReaction(queryWeather,now,query.stageAge(now),settings.humor,settings.stormFlash);
+            else if (query.view()==pet::View::Weather) screen.weather(queryWeather,queryWeatherPage,now);
+            else screen.clock(networkReady && network.connected());
+        } else if (message && (settings.modules&pet::Assistant)) screen.message(message,pet::elapsed(now,messageAt));
+        else if (ambientReaction) screen.weatherReaction(ambientWeather,now,pet::elapsed(now,ambientAt),settings.humor,settings.stormFlash);
         else {
-            auto view = query.active() ? query.view() : homeView(now);
-            if (view == pet::View::Pet) screen.face(now,personality.mood(now),settings.humor,gesture.progress(now,settings));
-            else if (view == pet::View::Clock) screen.clock(networkReady && network.connected());
+            const auto view=homeView(now);
+            if (view==pet::View::Pet) screen.face(now,personality.mood(now),settings.humor,gesture.progress(now,settings));
+            else if (view==pet::View::Clock) screen.clock(networkReady && network.connected());
             else {
-                unsigned part = now/(settings.pageSeconds*1000u);
-                unsigned cycle = (settings.modules & pet::Clock) && !(settings.modules & pet::Assistant) ? 4 : 3;
-                unsigned page = settings.weatherView==3 ? part%cycle : settings.weatherView;
-                if (query.active()) page = queryWeatherPage;
-                screen.weather(networkReady ? network.weather() : WeatherData{},page,now);
+                const unsigned part=now/(settings.pageSeconds*1000u);
+                const unsigned cycle=(settings.modules&pet::Clock) && !(settings.modules&pet::Assistant) ? 4 : 3;
+                screen.weather(weather,settings.weatherView==3 ? part%cycle : settings.weatherView,now);
             }
-            if (!query.active()) screen.progress(gesture.progress(now,settings));
+            screen.progress(gesture.progress(now,settings));
         }
         screen.show();
     }

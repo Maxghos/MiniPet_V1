@@ -1,20 +1,24 @@
-# MiniPet · ESP32-S3
+# MiniPet V2 · ESP32-S3
 
 Mascota de escritorio con ojos animados en una OLED **SSD1306 I²C de 128×32**, sensores PIR y ultrasónico, reloj de Santiago y clima de Puente Alto.
 
-El **TTP223 se reserva para ajustes**. Una presencia sostenida en la zona del HC-SR05 solicita **clima → hora → pantalla habitual**. El humor regula la iniciativa, las expresiones y los comentarios de la mascota; las consultas siempre se completan.
+El **TTP223 se reserva para ajustes**. Una presencia sostenida en la zona del HC-SR05 solicita **clima → reacción de la mascota → hora → pantalla habitual**. El humor regula la iniciativa, las expresiones y los comentarios de la mascota; las consultas siempre se completan. La reacción se omite con el asistente desactivado, No molestar, datos anteriores o pronóstico de próximos días.
 
 ## Qué incluye
 
-- Ocho estados: tranquilo, atento, curioso, contento, impactado, molesto, cansado y dormido. Variantes de ojos, parpadeos, miradas suaves, alerta con fade por tramado y descanso con `Zzz`.
+- **19 estilos de ojos y 11 estados**: se añaden ironía, puchero y entusiasmo, con variantes diferenciadas de las referencias originales y las cuatro nuevas. Parpadeos, miradas suaves, alerta con fade y descanso con `Zzz`.
+- **100 frases aleatorias** del archivo aportado, ocasionales según el humor. Texto centrado horizontal y verticalmente, acentos y signos españoles, páginas equilibradas y tiempo de lectura completo.
+- Reacciones al calor, frío, sol, nubes, niebla, lluvia, nieve y tormenta; bromas según el clima, animaciones ambientales y un aviso cuando nuevas actualizaciones pasan de seco a lluvia. **Sin peticiones adicionales**.
 - Humor **0–100 %**, mensajes variados sin repetir los tres últimos y descansos entre rachas de insistencia.
 - Presencia filtrada, tolerancia a ecos perdidos y gesto de **50–80 cm durante 5 s**, configurable. Necesita salir de la zona durante 1 s para rearmarse; un fondo inmóvil en esa zona al encender no activa consultas.
 - Módulos independientes: asistente, reloj y clima; cualquier combinación que deje al menos uno habilitado.
 - Clima principal con icono, detalles y máximas/mínimas de tres días. Consulta gratuita de Open-Meteo para uso no comercial, conforme a sus condiciones.
 - Hora por NTP y reglas de Santiago con horario de verano. Tras sincronizar, el reloj sigue funcionando sin Wi-Fi mientras el equipo esté encendido.
-- Menú de 21 opciones, ajustes persistentes y configuración Wi-Fi desde el teléfono. No requiere una clave de API meteorológica.
+- Menú de **25 opciones**, con controles independientes para frases random, reacciones y avisos del clima y destello de tormenta (apagado inicialmente). Se conservan los ajustes guardados en V1 y el Wi-Fi. No requiere una clave de API meteorológica.
 
 **[Guía de conexión y primera carga](docs/CONEXIONES.md)** · **[Comportamiento y ajustes](docs/COMPORTAMIENTO.md)** · **[Ver animaciones](docs/caras.html)**
+
+Los cambios de esta entrega están en **[CAMBIOS_V2.md](docs/CAMBIOS_V2.md)**. Para actualizar desde V1, abre el proyecto completo actualizado en VS Code/PlatformIO y ejecuta `esp32s3 → General → Build` y después `Upload`; no borres la memoria del dispositivo. El cableado es el mismo.
 
 Para la vista interactiva, descarga `docs/caras.html` y ábrelo en el navegador. Contiene cuadros producidos por el mismo motor C++ del firmware; GitHub muestra el código HTML en su visor.
 
@@ -54,6 +58,8 @@ pio pkg install -e esp32s3
 bash tools/test_host.sh
 pio run -e esp32s3 -e esp32s3-button
 bash tools/preview.sh
+# Opcional: comprobar también el visor generado (requiere Node.js 18+)
+node tools/test_preview.js
 ```
 
 Las pruebas de host necesitan Linux/macOS con `g++`, Python 3.9+ y la base IANA de zonas horarias. Ejecutan escenarios de sensores, gestos, rebotes, menús, prioridades, módulos, mensajes y respuestas meteorológicas, con AddressSanitizer y UndefinedBehaviorSanitizer. Comparan las reglas horarias del firmware con `America/Santiago` durante cada hora de 2026. La CI reproduce las pruebas y las dos compilaciones.
@@ -69,9 +75,13 @@ La compilación y estas simulaciones **no sustituyen las pruebas físicas**: hay
 | `src/Sensors.cpp` | Eco por interrupciones, PIR y botón |
 | `src/NetworkService.cpp` | Tarea de red, NTP, HTTPS y configuración Wi-Fi |
 | `src/Screen.cpp` | Pantallas, iconos y composición en 128×32 |
+| `src/TextLayout.cpp` | Conversión de español a la fuente de pantalla, ajuste de líneas, centrado y paginación |
+| `src/WeatherBehavior.cpp` | Clasificación del clima, comparación de actualizaciones y pausas compartidas |
+| `src/WeatherEffects.cpp` | Sudor, gotas, nieve, temblor y tormenta |
 | `include/Messages.h` | Frases adaptadas del archivo de referencia y comentarios de la mascota |
+| `assets/frases_random_es.txt` | Las 100 frases originales; `tools/generate_phrases.py` regenera su banco C++ |
 | `src/main.cpp` | Integración y prioridades |
 
-El clima se consulta cada 30 minutos y se reintenta al cabo de un minuto si falla. La última respuesta válida se conserva en RAM; se marca como anterior al desconectarse o al superar una hora. Un reinicio sin internet deja el reloj y el clima pendientes de sincronización; el asistente y los ajustes siguen disponibles.
+El clima se consulta cada 30 minutos y se reintenta al cabo de un minuto si falla. La última respuesta válida se conserva en RAM; se marca como anterior al desconectarse, al superar una hora desde la consulta o si la hora de la observación/modelo supera 90 minutos respecto a la descarga. Un reinicio sin internet deja el reloj y el clima pendientes de sincronización; el asistente y los ajustes siguen disponibles. Los avisos describen información de Open-Meteo, no mediciones físicas de lluvia en tu casa.
 
 Datos meteorológicos: [Open-Meteo](https://open-meteo.com/), [licencia de datos CC BY 4.0](https://open-meteo.com/en/license) y [condiciones del servicio](https://open-meteo.com/en/terms). Los iconos y el trazado de ojos son código del proyecto basado en las referencias aportadas; consulta su adaptación en [CARAS.md](docs/CARAS.md).

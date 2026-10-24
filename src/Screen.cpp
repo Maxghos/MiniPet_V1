@@ -10,6 +10,7 @@ bool Screen::begin() {
     Wire.begin(board::sda,board::scl,400000);
     if (!display_.begin(SSD1306_SWITCHCAPVCC,board::oledAddress,false,false)) return false;
     display_.setTextWrap(false); display_.setTextColor(SSD1306_WHITE);
+    display_.cp437(true);
     clear(); return true;
 }
 void Screen::brightness(uint8_t value) {
@@ -30,21 +31,23 @@ void Screen::face(uint32_t now, pet::Mood mood, uint8_t humor, float progress) {
     memcpy(display_.getBuffer(),canvas_.bytes.data(),canvas_.bytes.size());
     this->progress(progress);
 }
-void Screen::message(const char* value) {
+void Screen::message(const char* value, uint32_t age) {
     clear();
-    char line[22]{}; unsigned used = 0, y = 0;
-    const char* p = value;
-    while (*p && y < 32) {
-        while (*p == ' ') ++p;
-        const char* end = p; while (*end && *end != ' ') ++end;
-        unsigned length = end-p;
-        if (!length) break;
-        if (used && used+1+length > 21) { text((128-used*6)/2,y,line); y+=8; used = 0; line[0] = 0; }
-        if (used) line[used++] = ' ';
-        for (unsigned i = 0; i < length && used < 21; ++i) line[used++] = p[i];
-        line[used] = 0; p = end;
+    if (!value) value="";
+    if (messageText_!=value || messageLayout_.pages.empty()) {
+        messageText_=value; messageLayout_=pet::text::wrap(value);
     }
-    if (used && y < 32) text((128-used*6)/2,y,line);
+    const auto& page=messageLayout_.at(age);
+    int y=page.top();
+    for (const auto& line:page.lines) {
+        display_.setCursor(pet::text::Page::left(line),y);
+        for (unsigned char ch:line) display_.write(ch);
+        y+=8;
+    }
+}
+void Screen::weatherReaction(const WeatherData& data, uint32_t now, uint32_t age, uint8_t humor, bool flash) {
+    pet::drawWeatherReaction(faces_,canvas_,data,now,age,humor,flash);
+    memcpy(display_.getBuffer(),canvas_.bytes.data(),canvas_.bytes.size());
 }
 void Screen::clock(bool online) {
     clear();
@@ -76,7 +79,7 @@ void Screen::icon(int x, int y, unsigned code) {
 void Screen::weather(const WeatherData& w, unsigned page, uint32_t now) {
     clear();
     if (!w.valid) { text(2,1,"Clima: Puente Alto"); text(2,13,w.online ? "Actualizando..." : "Configura WiFi"); text(2,24,"Open-Meteo.com"); return; }
-    const bool stale = !w.online || uint32_t(now-w.fetchedMs)>3600000;
+    const bool stale = !weatherFresh(w,now);
     char s[32];
     if (page%3 == 0) {
         icon(0,0,w.code);

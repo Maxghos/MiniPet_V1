@@ -94,8 +94,16 @@ void NetworkService::fetchWeather() {
         WeatherData parsed;
         if (!error && decodeWeather(doc,parsed)) {
             parsed.fetchedMs = millis(); parsed.fetchedEpoch = time(nullptr);
-            if (xSemaphoreTake(mutex_,pdMS_TO_TICKS(20)) == pdTRUE) { weather_ = parsed; xSemaphoreGive(mutex_); }
-            Serial.println("Clima actualizado: Puente Alto");
+            bool accepted=false;
+            if (xSemaphoreTake(mutex_,pdMS_TO_TICKS(20)) == pdTRUE) {
+                if (!weather_.valid || parsed.observedEpoch>=weather_.observedEpoch) {
+                    parsed.revision=weather_.revision+1;
+                    weather_ = parsed;
+                    accepted=true;
+                }
+                xSemaphoreGive(mutex_);
+            }
+            Serial.println(accepted ? "Clima actualizado: Puente Alto" : "Observacion anterior o servicio ocupado; se conserva el clima");
         } else Serial.println("Respuesta de clima invalida; se conserva la anterior");
     } else Serial.printf("Clima: HTTP %d; se conserva la ultima lectura\n",status);
     http.end();

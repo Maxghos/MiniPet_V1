@@ -64,6 +64,8 @@ Alimenta el TTP223 a 3,3 V y selecciona **momentáneo, activo HIGH**, según sus
 - Quédate quieto delante de la zona de presencia: no debe interpretarse como ausencia solo porque el PIR deje de activarse.
 - Prueba humor 0 y 100, mensajes desactivados y horario de No molestar. Las bromas no deben impedir una consulta; el menú no debe ser interrumpido.
 - Apaga y enciende para comprobar persistencia de ajustes y Wi-Fi. Comprueba recuperación tras perder la red y la indicación de datos anteriores.
+- En V2, comprueba que tus ajustes de V1 se conservaron. Las nuevas opciones son Frases random, Reacción al clima, Avisos del clima y Destello tormenta. Tras clima actual/detalles debe aparecer una reacción de unos 2 s antes de la hora, con asistente habilitado y datos recientes.
+- Lee una frase larga completa: las páginas deben estar centradas y avanzar sin cortar el final. Prueba que una consulta o abrir ajustes la interrumpe de inmediato. El destello de tormenta empieza desactivado.
 - Revisa físicamente los parpadeos, el fade y la legibilidad. La meta de refresco es ~30 fps; la velocidad real depende del bus, cableado y módulo.
 
 El sensor mide distancia a objetos, no identifica personas ni determina su dirección. El equipo no tiene respaldo horario por batería. Las credenciales Wi-Fi se guardan en NVS del dispositivo; esta configuración no activa cifrado de flash/NVS ni OTA.

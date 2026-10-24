@@ -21,6 +21,7 @@ jobs:
       - run: bash tools/test_host.sh
       - run: pio run -e esp32s3 -e esp32s3-button
       - run: bash tools/preview.sh
+      - run: node tools/test_preview.js
       - uses: actions/upload-artifact@v4
         with:
           name: minipet-firmware-y-caras

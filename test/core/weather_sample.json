@@ -1,6 +1,7 @@
 {
   "timezone": "America/Santiago",
-  "current": {"temperature_2m": 22.5, "apparent_temperature": 21.2, "relative_humidity_2m": 45, "weather_code": 2, "wind_speed_10m": 9.4},
+  "utc_offset_seconds": -10800,
+  "current": {"time": "2026-10-22T12:00", "temperature_2m": 22.5, "apparent_temperature": 21.2, "relative_humidity_2m": 45, "weather_code": 2, "wind_speed_10m": 9.4},
   "daily": {
     "time": ["2026-10-22", "2026-10-23", "2026-10-24"],
     "weather_code": [2, 3, 61],

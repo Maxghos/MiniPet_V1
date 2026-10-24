@@ -8,8 +8,8 @@ namespace pet {
 using Tick = uint32_t;
 inline Tick elapsed(Tick now, Tick then) { return now - then; }
 enum Module : uint8_t { Assistant = 1, Clock = 2, Weather = 4 };
-enum class Mood : uint8_t { Calm, Attentive, Curious, Happy, Shocked, Annoyed, Tired, Sleeping };
-enum class View : uint8_t { Pet, Weather, Clock };
+enum class Mood : uint8_t { Calm, Attentive, Curious, Happy, Shocked, Annoyed, Tired, Sleeping, Smug, Pout, Excited, Count };
+enum class View : uint8_t { Pet, Weather, Clock, WeatherReaction };
 enum class Press : uint8_t { None, Short, Long, Back };
 
 struct Settings {
@@ -29,6 +29,11 @@ struct Settings {
     uint16_t absenceSeconds = 90;
     uint16_t sleepMinutes = 15;
     uint16_t pageSeconds = 5;
+    // Appended: the old 24-byte V1 prefix is preserved for migration.
+    uint8_t randomPhrases = 1;
+    uint8_t weatherReactions = 1;
+    uint8_t weatherNotices = 1;
+    uint8_t stormFlash = 0;
     void sanitize();
     bool quiet(int localHour) const;
 };
@@ -78,15 +83,17 @@ private:
 
 class Query {
 public:
-    void start(Tick now, const Settings& s, bool joke);
+    void start(Tick now, const Settings& s, bool joke, bool weatherReaction = false);
     bool update(Tick now);
     bool active() const { return active_; }
     bool joke() const { return active_ && joke_; }
     View view() const;
+    Tick stageAge(Tick now) const { return elapsed(now,since_); }
+    Tick totalDuration() const;
     void cancel() { active_ = false; }
 private:
     bool active_ = false, joke_ = false;
-    std::array<View, 2> pages_{};
+    std::array<View, 3> pages_{};
     uint8_t count_ = 0, index_ = 0;
     Tick since_ = 0, duration_ = 5000;
 };
@@ -96,14 +103,14 @@ public:
     void begin(Tick now);
     void react(Mood mood, Tick now, Tick duration);
     void interact(Tick now, const Settings& s);
-    // Returns true exactly when a new autonomous reminder should be displayed.
-    bool update(Tick now, bool present, bool motion, bool quiet,
-                bool allowReminders, const Settings& s, uint32_t randomValue);
+    void update(Tick now, bool present, bool motion, const Settings& s);
+    bool attentionDue(Tick now, bool present, const Settings& s) const;
+    void remind(Tick now, const Settings& s);
     Mood mood(Tick now) const;
     uint8_t reminders() const { return reminders_; }
 private:
-    Tick lastCompany_ = 0, lastInteraction_ = 0, lastReminder_ = 0;
-    Tick reminderGap_ = 0, reactionAt_ = 0, reactionDuration_ = 0;
+    Tick lastCompany_ = 0, lastInteraction_ = 0;
+    Tick reactionAt_ = 0, reactionDuration_ = 0;
     Tick lastMotion_ = 0;
     bool wasPresent_ = false;
     uint8_t reminders_ = 0;
@@ -112,7 +119,8 @@ private:
 
 class Menu {
 public:
-    static constexpr unsigned count = 21;
+    static constexpr unsigned count = 25;
+    static constexpr unsigned wifiItem = 22, resetItem = 23, saveItem = 24;
     void open(const Settings& settings) { draft = settings; active = true; editing = false; item = 0; }
     // Save, Portal, Closed, or None. Wi-Fi is configured separately from settings.
     enum class Action { None, Save, Portal, Closed };

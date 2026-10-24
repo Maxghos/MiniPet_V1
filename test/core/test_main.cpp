@@ -67,7 +67,7 @@ void touchAndMenu() {
     m.open(s); m.item=3; CHECK(m.input(Press::Long)==Menu::Action::None);
     CHECK(m.editing); m.input(Press::Short); CHECK(m.draft.humor==60);
     m.input(Press::Long); CHECK(!m.editing); CHECK(s.humor==50);
-    m.item=20; CHECK(m.input(Press::Long)==Menu::Action::Save); CHECK(!m.active);
+    m.item=Menu::saveItem; CHECK(m.input(Press::Long)==Menu::Action::Save); CHECK(!m.active);
     m.open(s); m.draft.modules=Assistant; m.item=0;
     m.input(Press::Long); m.input(Press::Short); CHECK(m.draft.modules==Assistant);
     m.input(Press::Back); CHECK(m.active); CHECK(!m.editing);
@@ -90,8 +90,14 @@ void enabledModulesAndQuery() {
 }
 unsigned reminders(uint8_t humor, bool quiet=false, bool enabled=true, bool allow=true) {
     Settings s; s.humor=humor; s.sleepMinutes=60; s.messages=enabled;
-    Personality p; p.begin(0); unsigned count=0;
-    for (Tick t=0;t<1800000;t+=100) if (p.update(t,true,false,quiet,allow,s,12345)) ++count;
+    s.randomPhrases=0; s.weatherReactions=0;
+    Personality p; p.begin(0); AmbientDirector director; director.begin(0); unsigned count=0;
+    for (Tick t=0;t<1800000;t+=100) {
+        p.update(t,true,false,s);
+        if (director.poll(t,s,!quiet && allow,p.attentionDue(t,true,s),false,12345,false)==Ambient::Reminder) {
+            p.remind(t,s); director.note(t,3500,s,12345); ++count;
+        }
+    }
     return count;
 }
 void humorAndPriorities() {
@@ -101,12 +107,12 @@ void humorAndPriorities() {
     CHECK(reminders(100,true)==0); CHECK(reminders(100,false,false)==0);
     CHECK(reminders(100,false,true,false)==0); // menu/query blocks reminders
     Settings s; Personality p; p.begin(0);
-    p.update(1000,true,false,false,false,s,1);
-    p.update(600000,true,false,false,false,s,1);
+    p.update(1000,true,false,s);
+    p.update(600000,true,false,s);
     CHECK(p.mood(600000)==Mood::Calm); // stationary company is still company
-    p.update(1600000,false,false,false,false,s,1);
+    p.update(1600000,false,false,s);
     CHECK(p.mood(1600000)==Mood::Sleeping);
-    p.update(1601000,true,false,false,false,s,1); CHECK(p.mood(1601000)==Mood::Happy);
+    p.update(1601000,true,false,s); CHECK(p.mood(1601000)==Mood::Happy);
     p.interact(1601100,s); CHECK(p.reminders()==0);
 }
 void settingsAndQuietHours() {
@@ -122,7 +128,7 @@ void settingsAndQuietHours() {
 void faceFramesAndMessages() {
     ++suites; FaceRenderer renderer(123); Canvas canvas;
     unsigned changed=0; auto previous=canvas.bytes;
-    for (unsigned mood=0;mood<8;++mood) {
+    for (unsigned mood=0;mood<unsigned(Mood::Count);++mood) {
         std::set<std::array<uint8_t,512>> unique;
         for (Tick t=0;t<10000;t+=33) {
             renderer.draw(canvas,t+10000*mood,Mood(mood),75);
@@ -161,9 +167,11 @@ void weatherValidation(const char* path) {
     CHECK(std::string(weatherLabel(95))=="Tormenta");
     CHECK(std::string(weatherLabel(61))=="Lluvia");
 }
+void testV2(unsigned& suites,unsigned& assertions);
 int main(int argc,char** argv) {
     gestureLifecycle(); gestureFailuresAndRollover(); sensorFiltering(); touchAndMenu();
     enabledModulesAndQuery(); humorAndPriorities(); settingsAndQuietHours(); faceFramesAndMessages();
     weatherValidation(argc>1 ? argv[1] : "test/core/weather_sample.json");
+    testV2(suites,assertions);
     std::cout << suites << " suites passed, " << assertions << " assertions\n";
 }

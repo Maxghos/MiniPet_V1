@@ -9,7 +9,9 @@ if [[ ! -d "$json_dir" ]]; then
 fi
 "${CXX:-g++}" -std=c++17 -Wall -Wextra -Werror -pedantic \
   -fsanitize=address,undefined -fno-omit-frame-pointer -g \
-  -Iinclude -I"$json_dir" src/PetCore.cpp src/FaceRenderer.cpp test/core/test_main.cpp \
+  -Iinclude -I"$json_dir" src/PetCore.cpp src/FaceRenderer.cpp src/TextLayout.cpp \
+  src/WeatherBehavior.cpp src/WeatherEffects.cpp test/core/test_main.cpp test/core/test_v2.cpp \
   -o build/test_core
 ./build/test_core "$@"
 python3 tools/test_timezone.py
+python3 tools/generate_phrases.py --check
