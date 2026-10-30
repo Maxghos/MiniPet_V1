@@ -1,0 +1,39 @@
+#include "AppProtocol.h"
+#include "TextLayout.h"
+#include <ArduinoJson.h>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+static void le16(std::vector<uint8_t>& v,unsigned i,uint16_t x){v[i]=x;v[i+1]=x>>8;}
+static void le32(std::vector<uint8_t>& v,unsigned i,uint32_t x){le16(v,i,x);le16(v,i+2,x>>16);}
+static bool save(const char* name,const std::string& value,bool check){
+    const std::string file=std::string("protocol/fixtures/")+name;
+    if(check){std::ifstream in(file,std::ios::binary);std::ostringstream current;current<<in.rdbuf();return current.str()==value;}
+    std::ofstream out(file,std::ios::binary);out.write(value.data(),value.size());return bool(out);
+}
+int main(int argc,char** argv){
+    const bool check=argc>1&&std::string(argv[1])=="--check";
+    std::vector<uint8_t> media(24+1024);
+    memcpy(media.data(),"MPET",4);media[4]=1;media[5]=10;le16(media,6,128);le16(media,8,32);le16(media,10,2);le32(media,12,1024);
+    for(unsigned frame=0;frame<2;++frame)for(unsigned y=0;y<32;++y)for(unsigned x=0;x<128;++x)
+        if((x+y+frame*17)%11==0)media[24+frame*512+x+(y/8)*128]|=1<<(y%8);
+    le32(media,16,pet::app::crc32(media.data()+24,1024));
+    JsonDocument doc;auto cases=doc.to<JsonArray>();
+    const char* values[]={"Hola","¿Qué tal? ¡Sí, ñandú!","Uno\nDos\nTres\nCuatro\nCinco",
+        "Mi cama y yo tenemos una relación seria: nos vemos todas las noches, pero por la mañana ella no quiere que me vaya.",
+        "Guardo archivos importantes con nombres como “final_final_v3_definitivo”."};
+    for(const char* text:values){
+        auto item=cases.add<JsonObject>();item["text"]=text;
+        auto layout=pet::text::wrap(text);item["duration"]=layout.duration();auto pages=item["pages"].to<JsonArray>();
+        for(const auto& page:layout.pages){auto p=pages.add<JsonObject>();p["top"]=page.top();p["duration"]=page.duration();auto lines=p["lines"].to<JsonArray>();
+            for(const auto& line:page.lines){auto l=lines.add<JsonArray>();for(unsigned char c:line)l.add(c);}
+        }
+    }
+    std::string json;serializeJsonPretty(doc,json);
+    json.erase(std::remove(json.begin(),json.end(),'\r'),json.end());json+='\n';
+    if(!save("text_layout.json",json,check)||!save("frame_clip.mpet",std::string(reinterpret_cast<char*>(media.data()),media.size()),check))return 1;
+    std::cout<<"App protocol fixtures "<<(check?"verified":"generated")<<"\n";
+}

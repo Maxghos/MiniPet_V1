@@ -3,9 +3,12 @@
 ## Prioridades
 
 1. Configuración Wi-Fi o menú: sin gestos ni mensajes autónomos.
-2. Consulta solicitada: posible comentario breve, clima, reacción de ~2 s, reloj y retorno.
-3. Intervención autónoma: mensaje paginado o reacción ambiental y retorno a los ojos.
-4. Pantalla habitual y animación.
+2. Contenido solicitado desde la app: texto/media; sensores y red continúan, iniciativas visuales pausadas.
+3. Consulta solicitada: posible comentario breve, clima, reacción de ~2 s, reloj y retorno.
+4. Intervención autónoma: mensaje paginado o reacción ambiental y retorno a los ojos.
+5. Pantalla habitual y animación.
+
+La conexión de la app, los mensajes de sesión y guardar archivos no cuentan como atención ni cambian la pantalla. Mostrar contenido/aplicar ajustes sí es una interacción. Al terminar, detener o perder la sesión durante ~15 s, MiniPet recupera su pantalla habitual y respeta una pausa antes de nuevas iniciativas. El menú físico interrumpe el contenido externo. La reproducción fijada que expiró no reaparece al reconectar. Ver [APP_ANDROID.md](APP_ANDROID.md).
 
 Con asistente habilitado, los ojos son la pantalla habitual. Si se habilitan solo clima y reloj, se alternan automáticamente. Un único módulo permanece en su vista. Las funciones deshabilitadas no aparecen en las consultas, ni siquiera por humor alto. Si solo está habilitado el asistente, el gesto se interpreta como interacción y despierta una reacción de curiosidad/contento.
 
@@ -66,6 +69,7 @@ El texto es «El clima ahora indica lluvia»: representa la estimación de Open-
 | Reacción al clima | Activada; consulta y ambiente |
 | Avisos del clima | Activados; requieren también Mensajes |
 | Destello tormenta | Desactivado; inversión breve opcional de hasta ~66 ms |
+| Vincular app | Muestra PIN temporal; Wi-Fi local o BLE; sin router abre la red de MiniPet |
 | Configurar WiFi | Abre una red temporal protegida durante un máximo de 5 min |
 | Restablecer | Prepara los valores iniciales; requiere Guardar y salir; conserva Wi-Fi |
 | Guardar y salir | Guarda la configuración en NVS |

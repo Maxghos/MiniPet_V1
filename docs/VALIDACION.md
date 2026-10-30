@@ -1,6 +1,33 @@
 # Validación de esta versión
 
-Comprobaciones de **V2** ejecutadas en el entorno de desarrollo, el 24 de octubre de 2026. El usuario confirmó el funcionamiento físico de V1; las adiciones de V2 todavía necesitan esa comprobación en su placa.
+## V3: Funciones + apk
+
+Comprobaciones ejecutadas el **30 de octubre de 2026** en el entorno de desarrollo. No hay un ESP32 ni un teléfono conectados a este entorno; las pruebas de software no sustituyen la prueba conjunta en tus dispositivos.
+
+| Comprobación | Resultado |
+|---|---|
+| Firmware ESP32-S3 N16R8 / TTP223 y pulsador mecánico | Ambas compilaciones correctas |
+| Tamaño del firmware | Aproximadamente 1,33 MB de flash y 58,7 kB de RAM estática; memoria dinámica adicional para radio y reproducción |
+| Pruebas C++ con sanitizadores | 20 suites, 7.151 comprobaciones correctas |
+| Regresiones de hora y frases | 8.760 comparaciones con America/Santiago (2026); 100 frases verificadas |
+| Protocolo de reproducción | Cabecera, dimensiones, CRC, límites, identificadores, temporizadores, fin de sesión y reproducción sin bucle comprobados |
+| Compatibilidad Android/firmware | Android consume un clip MPET y páginas de texto generados por el C++ del firmware |
+| Pruebas Android | 16 pruebas correctas, ninguna omitida; JUnit y Robolectric |
+| HTTP de la app | Peticiones reales contra un servidor local de prueba: vinculación, autenticación y estado |
+| Transferencias | Bloques, orden de offsets, finalización y cancelación comprobados con transporte de prueba |
+| Imágenes y biblioteca del teléfono | Decodificación PNG de Android, conversión y guardado/lectura comprobados con Robolectric |
+| Interfaz Android | Las cinco pestañas renderizadas con gráficos nativos de Robolectric y capturas revisadas |
+| Android Lint | Sin incidencias |
+| APK Android 8.0 o superior | Compilación correcta; firma APK v2 y alineación verificadas con las herramientas de Android |
+| Preparación del entorno | Scripts de instalación y construcción Android ejecutados; APK y clave de prueba fuera del repositorio |
+
+**Pendiente en hardware:** conexión BLE, emparejamiento con PIN, descubrimiento Wi-Fi, red propia del ESP32 en Android, rendimiento de transferencias y reproducción, decodificación de GIF/vídeo con los códecs del teléfono, persistencia tras reiniciar la placa y convivencia con sensores, clima y reloj. La ruta HTTP real del ESP32 y las radios no se han ejercitado desde un teléfono. Seguir la lista de [APP_ANDROID.md](APP_ANDROID.md#comprobación-física-recomendada).
+
+La APK entregada es de prueba, firmada para instalación directa. No se incluye en Git, en una release ni como artefacto de GitHub Actions. La CI compila la app y ejecuta sus pruebas, pero sus resultados posteriores al push son independientes de estas comprobaciones locales.
+
+## Antecedentes de V2
+
+Comprobaciones de **V2** ejecutadas en el entorno de desarrollo, el 24 de octubre de 2026. Se conserva este registro de la versión anterior; el usuario confirmó el funcionamiento físico de V1.
 
 | Comprobación | Resultado |
 |---|---|

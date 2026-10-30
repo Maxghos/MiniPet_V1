@@ -21,6 +21,21 @@ void Screen::text(int x, int y, const char* value, unsigned size) {
     display_.setTextSize(size); display_.setCursor(x,y); display_.print(value);
 }
 void Screen::show() { display_.display(); }
+void Screen::pairing(const char* pin,const char* ip,const char* name,const char* password,unsigned seconds) {
+    clear();char value[32];snprintf(value,sizeof(value),"PIN %s (%us)",pin,seconds);text(0,0,value);
+    text(0,8,ip);
+    if(name && *name){text(0,16,name);snprintf(value,sizeof(value),"Clave %s",password);text(0,24,value);}
+    else {text(0,16,"Abre app > Vincular");text(0,24,"Boton: cancelar");}
+}
+void Screen::remote(const pet::app::RemoteView& content) {
+    if(content.type==pet::app::Content::Media){memcpy(display_.getBuffer(),content.frame,512);return;}
+    if(!content.scrolling){message(content.text.c_str(),content.age);return;}
+    clear();const auto encoded=pet::text::encode(content.text.c_str());
+    const int width=int(encoded.size()*6)+128;
+    int x=128-int(uint64_t(content.age)*content.speed/1000%width);
+    display_.setCursor(x,12);
+    for(unsigned char c:encoded)display_.write(c=='\n' ? ' ' : c);
+}
 void Screen::progress(float value) {
     if (value <= 0) return;
     display_.drawFastHLine(0,31,128,SSD1306_BLACK);

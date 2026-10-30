@@ -10,6 +10,8 @@
 #include "NetworkService.h"
 #include "Messages.h"
 #include "WeatherBehavior.h"
+#include "AppService.h"
+#include <WiFi.h>
 
 namespace {
 pet::Settings settings;
@@ -24,6 +26,10 @@ pet::WeatherChanges weatherChanges;
 Sensors sensors;
 Screen screen;
 NetworkService network;
+AppService app;
+pet::app::RemoteView remoteContent;
+bool appReady=false;
+bool wasRemoteActive=false;
 messages::Picker picker;
 WeatherData weather,queryWeather,ambientWeather;
 bool screenReady=false,networkReady=false;
@@ -96,37 +102,65 @@ void setup() {
     Serial.begin(115200);
     loadSettings(); sensors.begin();
     screenReady=screen.begin();
-    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet V2","Hola, Puente Alto!"); screen.show(); }
+    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet V3","Hola, Puente Alto!"); screen.show(); }
     else Serial.println("OLED no disponible: revisar alimentacion, SDA 8, SCL 9 y direccion 0x3C");
     const uint32_t now=millis();
     personality.begin(now); gesture.reset(now); ambient.begin(now);
     networkReady=network.begin();
+    appReady=app.begin(settings);
     if (!networkReady) Serial.println("No se pudo iniciar servicio de red");
-    Serial.println("MiniPet V2 iniciado. Boton: ajustes. Gesto: 50-80 cm durante 5 s (configurable).");
+    Serial.println("MiniPet V3 iniciado. Boton: ajustes. App por WiFi :8080 o BLE.");
 }
 void loop() {
     const uint32_t now=millis();
     const bool quiet=quietNow();
     const pet::Press press=button.update(sensors.touch(),now);
+    if(appReady){
+        app.poll();
+        if(app.recentlyContacted())network.keepPortalAlive();
+        if(app.takePaired()){menu.active=false;gesture.reset(now);}
+        pet::Settings requested;
+        if(app.takeSettings(requested)){
+            const auto previous=settings;settings=requested;
+            if(!saveSettings()){settings=previous;app.updateSettings(settings);}
+            if(screenReady)screen.brightness(settings.brightness);
+            if(menu.active)menu.open(settings);
+        }
+        if(app.takeInteraction()){
+            query.cancel();message=nullptr;ambientReaction=false;
+            personality.interact(now,settings);ambient.note(now,0,settings,esp_random(),false);
+        }
+        app.read(remoteContent,now);
+    }
+    const bool remoteActive=remoteContent.type!=pet::app::Content::None;
+    if(wasRemoteActive&&!remoteActive){ambient.note(now,0,settings,esp_random(),false);gesture.reset(now);}
+    wasRemoteActive=remoteActive;
     if (networkReady) {
         network.poll();
         if (pet::elapsed(now,lastWeatherPoll)>=250) { weather=network.weather(); lastWeatherPoll=now; }
     }
     if (press!=pet::Press::None) {
-        if (network.portalActive()) network.stopPortal();
+        if(appReady){app.stop();remoteContent.type=pet::app::Content::None;}
+        if(appReady && app.pairing())app.closePairing();
+        else if (network.configuring()) network.stopPortal();
         else if (!menu.active) {
             menu.open(settings); query.cancel(); message=nullptr; ambientReaction=false;
         } else {
             const auto action=menu.input(press);
             if (action==pet::Menu::Action::Save) {
                 const auto previous=settings; settings=menu.draft;
-                if (saveSettings()) { if (screenReady) screen.brightness(settings.brightness); Serial.println("Ajustes guardados"); }
+                if (saveSettings()) { if (screenReady) screen.brightness(settings.brightness); if(appReady)app.updateSettings(settings); Serial.println("Ajustes guardados"); }
                 else { settings=previous; menu.open(menu.draft); Serial.println("No se pudo guardar ajustes"); }
             } else if (action==pet::Menu::Action::Portal && networkReady) network.startPortal();
+            else if(action==pet::Menu::Action::PairApp && appReady){
+                if(!network.connected())network.startPortal(true);
+                app.openPairing();
+            }
         }
         personality.interact(now,settings);
         gesture.reset(now); ambient.note(now,0,settings,esp_random(),false);
     }
+    if(appReady)app.localBusy(menu.active||network.configuring()||app.pairing());
     if (sensors.poll(now)) {
         presence.update(now,sensors.valid,sensors.cm,settings.presenceCm);
         if (sensors.valid && hadDistance && pet::elapsed(now,lastDistanceAt)<350 &&
@@ -134,10 +168,10 @@ void loop() {
             personality.react(pet::Mood::Shocked,now,1500);
         hadDistance=sensors.valid;
         if (sensors.valid) { lastDistance=sensors.cm; lastDistanceAt=now; }
-        if (menu.active || network.portalActive() || query.active()) gesture.reset(now);
+        if (menu.active || network.configuring() || query.active() || remoteActive) gesture.reset(now);
         else if (gesture.update(now,sensors.valid,sensors.cm,settings)) startQuery(now,quiet);
     }
-    personality.update(now,presence.present(),sensors.motion(now) && !menu.active && !query.active(),settings);
+    personality.update(now,presence.present(),sensors.motion(now) && !menu.active && !query.active() && !remoteActive,settings);
     query.update(now);
     if (message && pet::elapsed(now,messageAt)>=messageDuration) message=nullptr;
     if (ambientReaction && pet::elapsed(now,ambientAt)>=2000) ambientReaction=false;
@@ -146,8 +180,8 @@ void loop() {
     const bool notices=awake && !quiet && settings.messages && settings.weatherNotices &&
         (settings.modules&(pet::Assistant|pet::Weather))==(pet::Assistant|pet::Weather);
     weatherChanges.observe(weather,now,notices);
-    const bool allow=awake && !quiet && !menu.active && !network.portalActive() && !query.active() &&
-        !message && !ambientReaction && gesture.progress(now,settings)==0 &&
+    const bool allow=awake && !quiet && !menu.active && !network.configuring() && !query.active() &&
+        !message && !ambientReaction && !remoteActive && gesture.progress(now,settings)==0 &&
         mood!=pet::Mood::Shocked && mood!=pet::Mood::Attentive && homeView(now)==pet::View::Pet;
     const auto event=ambient.poll(now,settings,allow,personality.attentionDue(now,presence.present(),settings),
         weatherFresh(weather,now),esp_random(),weatherChanges.pending(now));
@@ -170,8 +204,13 @@ void loop() {
     }
     if (screenReady && pet::elapsed(now,lastFrame)>=board::frameMs) {
         lastFrame=now;
-        if (network.portalActive()) screen.portal(network.apName(),network.apPassword(),network.connected());
+        if(appReady&&app.pairing()){
+            const String ip=network.connected()?WiFi.localIP().toString():WiFi.softAPIP().toString();
+            screen.pairing(app.pin(),ip.c_str(),network.portalActive()?network.apName():"",network.apPassword(),app.pairingSeconds());
+        }
+        else if (network.configuring()) screen.portal(network.apName(),network.apPassword(),network.connected());
         else if (menu.active) screen.menu(menu,sensors.valid,sensors.cm);
+        else if(remoteContent.type!=pet::app::Content::None)screen.remote(remoteContent);
         else if (query.joke()) screen.message(jokeMessage ? jokeMessage : "Ya voy...",query.stageAge(now));
         else if (query.active()) {
             if (query.view()==pet::View::WeatherReaction) screen.weatherReaction(queryWeather,now,query.stageAge(now),settings.humor,settings.stormFlash);

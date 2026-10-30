@@ -5,3 +5,15 @@ __pycache__/
 .vscode/
 build/
 include/secrets.h
+*.apk
+*.aab
+*.jks
+*.keystore
+android/.gradle/
+android/local.properties
+android/**/build/
+.android/
+.gradle/
+artifacts/
+# Kotlin compiler state and diagnostic logs
+**/.kotlin/

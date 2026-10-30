@@ -1,6 +1,10 @@
-# MiniPet V2 · ESP32-S3
+# MiniPet V3 · ESP32-S3 + Android
 
 Mascota de escritorio con ojos animados en una OLED **SSD1306 I²C de 128×32**, sensores PIR y ultrasónico, reloj de Santiago y clima de Puente Alto.
+
+**Funciones + apk:** una app Android nativa amplía MiniPet por Wi-Fi local o BLE, con mensajes, imágenes/GIF/vídeos adaptados, biblioteca y ajustes. Conectarse no cambia su comportamiento; solo «Mostrar» ocupa la pantalla, y al terminar o perder la sesión recupera su funcionamiento autónomo. **[Instalación y uso de la app](docs/APP_ANDROID.md)** · **[Proyecto Android](android/README.md)** · **[Protocolo](docs/PROTOCOLO_APP.md)**.
+
+La APK se entrega por separado, fuera de Git. El repositorio contiene su código y los pasos para compilarla; no contiene APK/AAB ni claves de firma.
 
 El **TTP223 se reserva para ajustes**. Una presencia sostenida en la zona del HC-SR05 solicita **clima → reacción de la mascota → hora → pantalla habitual**. El humor regula la iniciativa, las expresiones y los comentarios de la mascota; las consultas siempre se completan. La reacción se omite con el asistente desactivado, No molestar, datos anteriores o pronóstico de próximos días.
 
@@ -14,11 +18,12 @@ El **TTP223 se reserva para ajustes**. Una presencia sostenida en la zona del HC
 - Módulos independientes: asistente, reloj y clima; cualquier combinación que deje al menos uno habilitado.
 - Clima principal con icono, detalles y máximas/mínimas de tres días. Consulta gratuita de Open-Meteo para uso no comercial, conforme a sus condiciones.
 - Hora por NTP y reglas de Santiago con horario de verano. Tras sincronizar, el reloj sigue funcionando sin Wi-Fi mientras el equipo esté encendido.
-- Menú de **25 opciones**, con controles independientes para frases random, reacciones y avisos del clima y destello de tormenta (apagado inicialmente). Se conservan los ajustes guardados en V1 y el Wi-Fi. No requiere una clave de API meteorológica.
+- Menú de **26 opciones**, con «Vincular app», controles independientes para frases random, reacciones y avisos del clima y destello de tormenta (apagado inicialmente). Se conservan los ajustes guardados en V1/V2 y el Wi-Fi. No requiere una clave de API meteorológica.
+- App Android 8.0+: previsualización exacta de 128×32, texto centrado/desplazado, recorte/zoom/giro/contraste/tramado y clips de hasta 30 s/15 fps. Bibliotecas separadas en teléfono y ESP32; guardar no cambia la pantalla.
 
 **[Guía de conexión y primera carga](docs/CONEXIONES.md)** · **[Comportamiento y ajustes](docs/COMPORTAMIENTO.md)** · **[Ver animaciones](docs/caras.html)**
 
-Los cambios de esta entrega están en **[CAMBIOS_V2.md](docs/CAMBIOS_V2.md)**. Para actualizar desde V1, abre el proyecto completo actualizado en VS Code/PlatformIO y ejecuta `esp32s3 → General → Build` y después `Upload`; no borres la memoria del dispositivo. El cableado es el mismo.
+Los cambios de V2 están en **[CAMBIOS_V2.md](docs/CAMBIOS_V2.md)**; las nuevas funciones y límites, en **[APP_ANDROID.md](docs/APP_ANDROID.md)**. Para actualizar desde V1/V2, abre el proyecto completo actualizado en VS Code/PlatformIO y ejecuta `esp32s3 → General → Build` y después `Upload`; no borres la memoria del dispositivo. El cableado es el mismo. Después instala la APK y abre «Vincular app» en la OLED.
 
 Para la vista interactiva, descarga `docs/caras.html` y ábrelo en el navegador. Contiene cuadros producidos por el mismo motor C++ del firmware; GitHub muestra el código HTML en su visor.
 
@@ -74,6 +79,8 @@ La compilación y estas simulaciones **no sustituyen las pruebas físicas**: hay
 | `src/FaceRenderer.cpp` | Geometría y animación de ojos, framebuffer nativo de 512 bytes |
 | `src/Sensors.cpp` | Eco por interrupciones, PIR y botón |
 | `src/NetworkService.cpp` | Tarea de red, NTP, HTTPS y configuración Wi-Fi |
+| `src/AppService.cpp` | API Wi-Fi/BLE, vinculación, transferencias y biblioteca LittleFS |
+| `src/AppProtocol.cpp` | Formato MPET/CRC y reproducción con sesión temporal |
 | `src/Screen.cpp` | Pantallas, iconos y composición en 128×32 |
 | `src/TextLayout.cpp` | Conversión de español a la fuente de pantalla, ajuste de líneas, centrado y paginación |
 | `src/WeatherBehavior.cpp` | Clasificación del clima, comparación de actualizaciones y pausas compartidas |
@@ -81,6 +88,8 @@ La compilación y estas simulaciones **no sustituyen las pruebas físicas**: hay
 | `include/Messages.h` | Frases adaptadas del archivo de referencia y comentarios de la mascota |
 | `assets/frases_random_es.txt` | Las 100 frases originales; `tools/generate_phrases.py` regenera su banco C++ |
 | `src/main.cpp` | Integración y prioridades |
+| `android/` | App Kotlin/Jetpack Compose y pruebas Android |
+| `protocol/fixtures/` | Contratos binarios y de texto comprobados entre C++ y Kotlin |
 
 El clima se consulta cada 30 minutos y se reintenta al cabo de un minuto si falla. La última respuesta válida se conserva en RAM; se marca como anterior al desconectarse, al superar una hora desde la consulta o si la hora de la observación/modelo supera 90 minutos respecto a la descarga. Un reinicio sin internet deja el reloj y el clima pendientes de sincronización; el asistente y los ajustes siguen disponibles. Los avisos describen información de Open-Meteo, no mediciones físicas de lluvia en tu casa.
 

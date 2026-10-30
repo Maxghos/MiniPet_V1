@@ -119,11 +119,11 @@ private:
 
 class Menu {
 public:
-    static constexpr unsigned count = 25;
-    static constexpr unsigned wifiItem = 22, resetItem = 23, saveItem = 24;
+    static constexpr unsigned count = 26;
+    static constexpr unsigned appItem = 22, wifiItem = 23, resetItem = 24, saveItem = 25;
     void open(const Settings& settings) { draft = settings; active = true; editing = false; item = 0; }
     // Save, Portal, Closed, or None. Wi-Fi is configured separately from settings.
-    enum class Action { None, Save, Portal, Closed };
+    enum class Action { None, Save, Portal, PairApp, Closed };
     Action input(Press press);
     const char* label() const;
     void value(char* out, unsigned size) const;

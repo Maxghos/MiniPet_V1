@@ -108,7 +108,8 @@ void NetworkService::fetchWeather() {
     } else Serial.printf("Clima: HTTP %d; se conserva la ultima lectura\n",status);
     http.end();
 }
-void NetworkService::startPortal() {
+void NetworkService::startPortal(bool forApp) {
+    appPortal_=forApp;
     if (portal_) return;
     snprintf(apName_,sizeof(apName_),"MiniPet-%04X",unsigned(ESP.getEfuseMac() & 0xffff));
     snprintf(apPassword_,sizeof(apPassword_),"%08lu",static_cast<unsigned long>(esp_random()%100000000));

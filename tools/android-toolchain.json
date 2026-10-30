@@ -1,0 +1,12 @@
+{
+  "gradleVersion": "8.9",
+  "gradleSha256": "d725d707bfabd4dfdc958c624003b3c80accc03f7037b5122c4b1d0ef15cecab",
+  "commandToolsUrl": "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip",
+  "commandToolsSha1": "d313adb7aedccf6cf0cfca51ec180f0059f5f8f8",
+  "commandToolsSha256": "2d2d50857e4eb553af5a6dc3ad507a17adf43d115264b1afc116f95c92e5e258",
+  "sdkPackages": [
+    "platform-tools",
+    "platforms;android-35",
+    "build-tools;34.0.0"
+  ]
+}

@@ -48,6 +48,8 @@ Alimenta el TTP223 a 3,3 V y selecciona **momentáneo, activo HIGH**, según sus
 
 ## Primera carga
 
+Para la app de V3, el cableado se mantiene. Actualiza el firmware y sigue [APP_ANDROID.md](APP_ANDROID.md). La nueva biblioteca inicializa la partición de archivos antes no usada; no borra los ajustes NVS ni el Wi-Fi.
+
 1. Compila y conecta la placa por USB con un cable de datos. Para los mensajes de `Serial`, esta configuración usa el USB nativo del S3. La carga también puede hacerse por el puente USB-UART de la placa, seleccionando su puerto.
 2. Ejecuta `pio run -e esp32s3 -t upload --upload-port PUERTO`. Si la carga no inicia, mantén BOOT, pulsa y suelta RESET, suelta BOOT y vuelve a intentarlo. No es necesario mantener el monitor abierto.
 3. La OLED debe mostrar el saludo y después los ojos. Si está vacía, revisa 128×32, `0x3C`, alimentación y SDA/SCL. Algunos módulos usan `0x3D`: adapta `BoardConfig.h`.

@@ -11,9 +11,11 @@ public:
     bool begin();
     WeatherData weather();
     void poll();
-    void startPortal();
+    void startPortal(bool forApp=false);
     void stopPortal();
     bool portalActive() const { return portal_; }
+    bool configuring() const { return portal_ && !appPortal_; }
+    void keepPortalAlive() { if(portal_ && appPortal_)portalAt_=millis(); }
     const char* apName() const { return apName_; }
     const char* apPassword() const { return apPassword_; }
     bool connected() const;
@@ -28,6 +30,7 @@ private:
     char ssid_[33]{}, password_[64]{};
     bool credentialsChanged_ = false;
     bool portal_ = false;
+    bool appPortal_ = false;
     uint32_t portalAt_ = 0;
     char apName_[20]{}, apPassword_[16]{};
     WebServer server_{80};

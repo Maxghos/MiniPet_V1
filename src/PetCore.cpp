@@ -166,7 +166,7 @@ static const char* labels[Menu::count] = {
     "Espera inicial", "Dormir tras", "Gesto desde", "Gesto hasta",
     "Mantener gesto", "Presencia hasta", "Tiempo pantalla", "Brillo",
     "No molestar", "Desde hora", "Hasta hora", "Vista clima",
-    "Frases random", "Reaccion al clima", "Avisos del clima", "Destello tormenta", "Configurar WiFi",
+    "Frases random", "Reaccion al clima", "Avisos del clima", "Destello tormenta", "Vincular app", "Configurar WiFi",
     "Restablecer", "Guardar y salir"
 };
 const char* Menu::label() const { return labels[item % count]; }
@@ -239,6 +239,7 @@ Menu::Action Menu::input(Press p) {
         if (item == saveItem) { draft.sanitize(); active = false; return Action::Save; }
         if (item == resetItem) { draft = Settings{}; item = saveItem; editing = false; }
         else if (item == wifiItem) return Action::Portal;
+        else if (item == appItem) return Action::PairApp;
         else editing = !editing;
     }
     return Action::None;
