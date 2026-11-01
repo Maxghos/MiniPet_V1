@@ -4,7 +4,7 @@ Mascota de escritorio con ojos animados en una OLED **SSD1306 I²C de 128×32**,
 
 **Funciones + apk:** una app Android nativa amplía MiniPet por Wi-Fi local o BLE, con mensajes, imágenes/GIF/vídeos adaptados, biblioteca y ajustes. Conectarse no cambia su comportamiento; solo «Mostrar» ocupa la pantalla, y al terminar o perder la sesión recupera su funcionamiento autónomo. **[Instalación y uso de la app](docs/APP_ANDROID.md)** · **[Proyecto Android](android/README.md)** · **[Protocolo](docs/PROTOCOLO_APP.md)**.
 
-La APK se entrega por separado, fuera de Git. El repositorio contiene su código y los pasos para compilarla; no contiene APK/AAB ni claves de firma.
+**[Descargar APK MiniPet 3.0.0](releases/android/MiniPet-3.0.0-debug.apk?raw=true)** para Android 8.0 o superior. Es una compilación de prueba firmada, guardada en `releases/android` junto con su SHA-256. El repositorio también contiene su código y los pasos para compilarla; las claves de firma y los archivos generados por las compilaciones siguen excluidos.
 
 El **TTP223 se reserva para ajustes**. Una presencia sostenida en la zona del HC-SR05 solicita **clima → reacción de la mascota → hora → pantalla habitual**. El humor regula la iniciativa, las expresiones y los comentarios de la mascota; las consultas siempre se completan. La reacción se omite con el asistente desactivado, No molestar, datos anteriores o pronóstico de próximos días.
 

@@ -27,8 +27,12 @@ jobs:
       - name: Verify app and build an untracked test APK
         working-directory: android
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug
-      - name: APK files must never be tracked
-        run: test -z "$(git ls-files '*.apk' '*.aab' '*.jks' '*.keystore')"
+      - name: Verify published APK and exclude generated apps and signing keys
+        run: |
+          test -z "$(git ls-files '*.aab' '*.jks' '*.keystore')"
+          test "$(git ls-files '*.apk')" = 'releases/android/MiniPet-3.0.0-debug.apk'
+          cd releases/android
+          sha256sum -c MiniPet-3.0.0-debug.apk.sha256
   verify:
     runs-on: ubuntu-latest
     steps:

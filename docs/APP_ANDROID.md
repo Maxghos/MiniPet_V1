@@ -8,7 +8,7 @@ El cableado es el mismo. La configuración y el Wi-Fi de V1/V2 se conservan. No 
 
 ## 2. Instalar la APK
 
-Abre la APK entregada en tu teléfono Android 8.0 o superior. Autoriza la instalación desde tu navegador/gestor de archivos si Android lo solicita. No necesitas Android Studio ni Expo. Esta APK es una compilación de prueba firmada; se entrega fuera de Git y no se publica en una tienda.
+**[Descarga la APK MiniPet 3.0.0](../releases/android/MiniPet-3.0.0-debug.apk?raw=true)** y ábrela en tu teléfono Android 8.0 o superior. Autoriza la instalación desde tu navegador/gestor de archivos si Android lo solicita. No necesitas Android Studio ni Expo. Esta APK es una compilación de prueba firmada, disponible en el repositorio; no se publica en una tienda. Su SHA-256 está en la misma carpeta `releases/android`.
 
 ## 3. Vincular por Wi-Fi (recomendado)
 

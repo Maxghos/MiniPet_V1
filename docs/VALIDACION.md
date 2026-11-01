@@ -19,11 +19,11 @@ Comprobaciones ejecutadas el **30 de octubre de 2026** en el entorno de desarrol
 | Interfaz Android | Las cinco pestañas renderizadas con gráficos nativos de Robolectric y capturas revisadas |
 | Android Lint | Sin incidencias |
 | APK Android 8.0 o superior | Compilación correcta; firma APK v2 y alineación verificadas con las herramientas de Android |
-| Preparación del entorno | Scripts de instalación y construcción Android ejecutados; APK y clave de prueba fuera del repositorio |
+| Preparación del entorno | Scripts de instalación y construcción Android ejecutados; clave de prueba fuera del repositorio |
 
 **Pendiente en hardware:** conexión BLE, emparejamiento con PIN, descubrimiento Wi-Fi, red propia del ESP32 en Android, rendimiento de transferencias y reproducción, decodificación de GIF/vídeo con los códecs del teléfono, persistencia tras reiniciar la placa y convivencia con sensores, clima y reloj. La ruta HTTP real del ESP32 y las radios no se han ejercitado desde un teléfono. Seguir la lista de [APP_ANDROID.md](APP_ANDROID.md#comprobación-física-recomendada).
 
-La APK entregada es de prueba, firmada para instalación directa. No se incluye en Git, en una release ni como artefacto de GitHub Actions. La CI compila la app y ejecuta sus pruebas, pero sus resultados posteriores al push son independientes de estas comprobaciones locales.
+La APK entregada es de prueba, firmada para instalación directa. Desde el 1 de noviembre de 2026, la misma APK verificada se incluye en `releases/android` junto con su SHA-256, a petición del usuario. Las claves de firma permanecen fuera de Git. La CI compila la app, ejecuta sus pruebas y verifica el SHA-256 de la APK publicada; sus resultados posteriores al push son independientes de estas comprobaciones locales.
 
 ## Antecedentes de V2
 
