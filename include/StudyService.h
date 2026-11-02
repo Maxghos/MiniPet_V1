@@ -7,7 +7,7 @@
 class StudyService {
 public:
     bool begin();
-    void poll();
+    void poll(pet::study::Snapshot& output);
     bool read(pet::study::Snapshot& output);
     void execute(JsonVariantConst request,JsonObject reply);
     bool control(const char* operation,uint32_t expectedRevision,const pet::study::Config* config=nullptr);

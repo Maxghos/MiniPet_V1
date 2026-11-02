@@ -30,11 +30,13 @@ void Screen::pairing(const char* pin,const char* ip,const char* name,const char*
 void Screen::remote(const pet::app::RemoteView& content) {
     if(content.type==pet::app::Content::Media){memcpy(display_.getBuffer(),content.frame,512);return;}
     if(!content.scrolling){message(content.text.c_str(),content.age);return;}
-    clear();const auto encoded=pet::text::encode(content.text.c_str());
-    const int width=int(encoded.size()*6)+128;
+    if(!scrollCached_||scrollRevision_!=content.revision){
+        scrollText_=pet::text::encode(content.text.c_str());scrollRevision_=content.revision;scrollCached_=true;
+    }
+    clear();const int width=int(scrollText_.size()*6)+128;
     int x=128-int(uint64_t(content.age)*content.speed/1000%width);
     display_.setCursor(x,12);
-    for(unsigned char c:encoded)display_.write(c=='\n' ? ' ' : c);
+    for(unsigned char c:scrollText_)display_.write(c=='\n' ? ' ' : c);
 }
 void Screen::study(const pet::study::Snapshot& s,uint32_t now,uint8_t humor) {
     using namespace pet::study;

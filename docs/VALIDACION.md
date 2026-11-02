@@ -1,5 +1,23 @@
 # Validación de esta versión
 
+## V3.1.1: mantenimiento de sensores y optimizaciones
+
+| Comprobación | Resultado |
+|---|---|
+| Pruebas C++ del comportamiento, con sanitizadores | 33 suites, 7.926 comprobaciones correctas |
+| Controlador real `src/Sensors.cpp` con GPIO/reloj simulados | Cinco suites, 388 comprobaciones correctas; AddressSanitizer/UndefinedBehaviorSanitizer |
+| Gesto | Mano moviéndose dentro de la zona, bordes con histéresis, lectura perdida, ausencia prolongada de eco, salida con mediana antigua y rearme confirmado |
+| Captura del HC-SR05 | Pico corto seguido de eco válido, eco tardío, timeout, ECHO inicialmente alto, lectura demasiado antigua y 50 ciclos alternando aciertos/pérdidas |
+| Simulación integrada controlador→filtro→gesto | Una mano variable, una lectura perdida y un valor atípico completan una sola consulta; los intervalos interrumpidos no adelantan el disparo |
+| PIR y presencia | Pulsos breves, calentamiento con HIGH inicial, rearme, huecos entre muestras y separación entre sorpresas |
+| Relojes | Se ejercitan los desbordamientos de `micros()` y `millis()` en captura y calentamiento |
+| Firmware N16R8 / TTP223 y pulsador | Ambas compilaciones correctas; aproximadamente 1,35 MB de flash y 58,9 kB de RAM estática |
+| Regresiones | 8.760 comparaciones de zona horaria, 100 frases y fixtures de media/texto/Pomodoro correctos |
+
+La app Android y su APK 3.1.0 no cambian en esta actualización. Se conserva el protocolo y el formato de ajustes; la versión que informa el firmware pasa a 3.1.1. Las correcciones de adquisición de mutex/reloj se revisaron y compilaron; no se afirma una prueba de concurrencia en un ESP32 físico.
+
+**Pendiente en tu montaje:** sensibilidad con tu sensor/clon, alimentación y entorno, comodidad de la espera de cinco segundos y ausencia de activaciones no deseadas. El simulador ejecuta el controlador C++ real, pero no reproduce la electrónica, interferencias reales ni el planificador del ESP32. La comprobación física está en [AJUSTES_3_1_1.md](AJUSTES_3_1_1.md).
+
 ## V3.1: modo estudio / Pomodoro
 
 Comprobaciones del **1 de noviembre de 2026**, fecha local de Santiago. Las pruebas del temporizador usan avance simulado y el mismo motor/codec C++ del firmware. No hay un ESP32 ni un teléfono físico conectados al entorno.

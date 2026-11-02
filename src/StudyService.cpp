@@ -25,13 +25,14 @@ bool StudyService::save(uint32_t now) {
     if(persisted_){savedRevision_=timer_.snapshot(now).revision;lastSave_=now;}
     return persisted_;
 }
-void StudyService::poll() {
+void StudyService::poll(pet::study::Snapshot& output) {
     if(!mutex_||xSemaphoreTake(mutex_,pdMS_TO_TICKS(2))!=pdTRUE)return;
     const uint32_t now=millis();
     timer_.update(now);const auto value=timer_.snapshot(now);active_=value.active();
     const bool dirty=value.revision!=savedRevision_||
         (value.state==pet::study::State::Running&&pet::elapsed(now,lastSave_)>=60000);
     if(dirty&&(persisted_||pet::elapsed(now,lastAttempt_)>=5000))save(now);
+    output=value;
     xSemaphoreGive(mutex_);
 }
 bool StudyService::read(pet::study::Snapshot& out) {
@@ -46,7 +47,7 @@ void StudyService::execute(JsonVariantConst request,JsonObject reply) {
     const uint32_t now=millis();const auto before=timer_.snapshot(now).revision;
     pet::study::command(timer_,request,reply,now);
     const auto value=timer_.snapshot(now);active_=value.active();
-    if(value.revision!=before||value.revision!=savedRevision_)save(now);
+    if(value.revision!=before||(value.revision!=savedRevision_&&pet::elapsed(now,lastAttempt_)>=5000))save(now);
     reply["study"]["persisted"]=persisted_;
     xSemaphoreGive(mutex_);
 }

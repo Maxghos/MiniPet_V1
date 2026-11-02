@@ -1,6 +1,8 @@
-# MiniPet V3.1 · ESP32-S3 + Android + Pomodoro
+# MiniPet V3.1.1 · ESP32-S3 + Android + Pomodoro
 
 Mascota de escritorio con ojos animados en una OLED **SSD1306 I²C de 128×32**, sensores PIR y ultrasónico, reloj de Santiago y clima de Puente Alto.
+
+**[Ajustes del firmware 3.1.1](docs/AJUSTES_3_1_1.md):** gesto más tolerante a pequeños movimientos y lecturas perdidas, captura de ecos más robusta, filtro del PIR y pequeñas optimizaciones. Se conserva la APK 3.1.0; basta actualizar la placa.
 
 **Nuevo: [modo estudio / Pomodoro](docs/ESTUDIO.md).** Concentración y descansos configurables, pausa/reanudación, descanso largo por ciclos y resumen. Sigue en marcha sin la app ni internet; puedes controlarlo también desde el menú físico.
 

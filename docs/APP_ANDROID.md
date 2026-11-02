@@ -2,7 +2,7 @@
 
 ## 1. Actualizar MiniPet
 
-Descarga el proyecto completo actualizado, abre su raíz en VS Code/PlatformIO y ejecuta **esp32s3 → General → Build**, después **Upload**. Para un pulsador mecánico usa `esp32s3-button`. El saludo dice **MiniPet V3.1**; el menú incluye **Vincular app** y **Modo estudio**.
+Descarga el proyecto completo actualizado, abre su raíz en VS Code/PlatformIO y ejecuta **esp32s3 → General → Build**, después **Upload**. Para un pulsador mecánico usa `esp32s3-button`. El saludo dice **MiniPet V3.1.1**; el menú incluye **Vincular app** y **Modo estudio**. Esta revisión mejora los sensores y conserva la APK 3.1.0.
 
 El cableado es el mismo. La configuración y el Wi-Fi de V1/V2 se conservan. No necesitas borrar la flash. En el primer arranque se inicializa la partición de archivos que las versiones anteriores de MiniPet no utilizaban; allí se guarda la nueva biblioteca, separada de los ajustes NVS.
 

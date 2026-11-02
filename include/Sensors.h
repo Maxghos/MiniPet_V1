@@ -7,12 +7,13 @@ public:
     void begin();
     bool poll(uint32_t now); // New echo or timeout; never blocks for an echo.
     bool valid = false;
-    float cm = 0;
+    float cm = 0,rawCm = 0;
     bool motion(uint32_t now);
     bool touch() const;
 private:
     static void IRAM_ATTR echoEdge();
     uint32_t lastTrigger_ = 0, sentAt_ = 0;
-    bool pending_ = false, pirWas_ = false;
+    bool pending_ = false;
     pet::DistanceFilter filter_;
+    pet::PirMotion pir_;
 };

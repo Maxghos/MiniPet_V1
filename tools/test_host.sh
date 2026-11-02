@@ -11,9 +11,13 @@ fi
   -fsanitize=address,undefined -fno-omit-frame-pointer -g \
   -Iinclude -I"$json_dir" src/PetCore.cpp src/FaceRenderer.cpp src/TextLayout.cpp \
   src/WeatherBehavior.cpp src/WeatherEffects.cpp src/AppProtocol.cpp src/StudyTimer.cpp src/StudyCodec.cpp \
-  test/core/test_main.cpp test/core/test_v2.cpp test/core/test_app.cpp test/core/test_study.cpp \
+  test/core/test_main.cpp test/core/test_v2.cpp test/core/test_app.cpp test/core/test_study.cpp test/core/test_sensor_behavior.cpp \
   -o build/test_core
 ./build/test_core "$@"
+"${CXX:-g++}" -std=c++17 -Wall -Wextra -Werror -pedantic \
+  -fsanitize=address,undefined -fno-omit-frame-pointer -g \
+  -Itest/sensors -Iinclude src/Sensors.cpp src/PetCore.cpp test/sensors/test_sensors.cpp -o build/test_sensors
+./build/test_sensors
 python3 tools/test_timezone.py
 python3 tools/generate_phrases.py --check
 "${CXX:-g++}" -std=c++17 -Wall -Wextra -Werror -Iinclude -I"$json_dir" \

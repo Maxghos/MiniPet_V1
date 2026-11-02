@@ -46,18 +46,18 @@ private:
     Tick rawSince_ = 0, downSince_ = 0;
 };
 
-// Invalid echoes break a hold. Rearming requires 1 s outside the gesture zone.
+// Small movements and brief missing echoes pause progress; only valid readings
+// count. Rearming requires 1 s of confirmed distance outside the gesture zone.
 class HoldGesture {
 public:
     bool update(Tick now, bool valid, float cm, const Settings& s);
+    bool update(Tick now, bool valid, float cm, float rawCm, const Settings& s);
     void reset(Tick now);
     float progress(Tick now, const Settings& s) const;
 private:
     bool armed_ = false, holding_ = false, outside_ = false;
-    Tick outsideSince_ = 0, holdSince_ = 0;
-    Tick lastSample_ = 0;
-    bool sampled_ = false;
-    float anchor_ = 0;
+    Tick outsideSince_ = 0, heldMs_ = 0, lastGood_ = 0, lastSample_ = 0;
+    bool sampled_ = false, previousGood_ = false;
 };
 
 class DistanceFilter {
@@ -78,7 +78,26 @@ public:
     bool present() const { return present_; }
 private:
     bool present_ = false, candidate_ = false, tracking_ = false;
-    Tick candidateSince_ = 0;
+    Tick candidateSince_ = 0,lastSample_ = 0;
+    bool sampled_ = false;
+};
+
+class PirMotion {
+public:
+    void begin(Tick now,Tick warmupMs=60000);
+    bool update(bool high,Tick now);
+private:
+    Tick began_=0,warmup_=60000,changedAt_=0;
+    bool warmed_=false,raw_=false,stable_=false,armed_=false;
+};
+
+class ApproachReaction {
+public:
+    bool update(Tick now,bool valid,float cm,bool allow);
+private:
+    Tick lastSample_=0,lastReaction_=0;
+    float previous_=0;
+    bool hadSample_=false,reacted_=false;
 };
 
 class Query {

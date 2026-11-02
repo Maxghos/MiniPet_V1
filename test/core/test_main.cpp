@@ -19,11 +19,13 @@ void gestureLifecycle() {
     // A stationary background in the band at boot never requests anything.
     for (Tick t=0;t<10000;t+=100) CHECK(!g.update(t,true,60,s));
     for (Tick t=10000;t<=11100;t+=100) CHECK(!g.update(t,true,200,s));
-    for (Tick t=11200;t<16200;t+=100) CHECK(!g.update(t,true,60,s));
-    CHECK(g.progress(13700,s)>.49f && g.progress(13700,s)<.51f);
+    for (Tick t=11200;t<16200;t+=100) {
+        CHECK(!g.update(t,true,60,s));
+        if(t==13700)CHECK(g.progress(t,s)>.49f&&g.progress(t,s)<.51f);
+    }
     CHECK(g.update(16200,true,60,s));
     for (Tick t=16300;t<30000;t+=100) CHECK(!g.update(t,true,60,s));
-    for (Tick t=30000;t<=31100;t+=100) CHECK(!g.update(t,false,0,s));
+    for (Tick t=30000;t<=31100;t+=100) CHECK(!g.update(t,true,200,s));
     for (Tick t=31200;t<36200;t+=100) CHECK(!g.update(t,true,62,s));
     CHECK(g.update(36200,true,62,s));
 }
@@ -36,8 +38,8 @@ void gestureFailuresAndRollover() {
     g.reset(10000);
     for (Tick t=10000;t<=11100;t+=100) g.update(t,true,200,s);
     for (Tick t=11200;t<14000;t+=100) CHECK(!g.update(t,true,60,s));
-    CHECK(!g.update(14000,false,0,s));
-    for (Tick t=14100;t<19000;t+=100) CHECK(!g.update(t,true,60,s));
+    for(Tick t=14000;t<=14400;t+=100)CHECK(!g.update(t,false,0,s));
+    for (Tick t=14500;t<19400;t+=100) CHECK(!g.update(t,true,60,s));
     CHECK(!g.update(24000,true,60,s)); // a data gap cannot count as a continuous hold
     CHECK(g.progress(24000,s)==0);
 }
@@ -170,6 +172,7 @@ void weatherValidation(const char* path) {
 void testV2(unsigned& suites,unsigned& assertions);
 void testApp(unsigned& suites,unsigned& assertions);
 void testStudy(unsigned& suites,unsigned& assertions);
+void testSensorBehavior(unsigned& suites,unsigned& assertions);
 int main(int argc,char** argv) {
     gestureLifecycle(); gestureFailuresAndRollover(); sensorFiltering(); touchAndMenu();
     enabledModulesAndQuery(); humorAndPriorities(); settingsAndQuietHours(); faceFramesAndMessages();
@@ -177,5 +180,6 @@ int main(int argc,char** argv) {
     testV2(suites,assertions);
     testApp(suites,assertions);
     testStudy(suites,assertions);
+    testSensorBehavior(suites,assertions);
     std::cout << suites << " suites passed, " << assertions << " assertions\n";
 }

@@ -30,7 +30,7 @@ public:
     bool recentlyContacted() const { return contacted_ && uint32_t(millis()-lastContact_)<15000; }
     void stop();
     bool active();
-    void read(pet::app::RemoteView& view,uint32_t now);
+    void read(pet::app::RemoteView& view);
     std::string dispatch(const std::string& json,const std::string& bearer="");
     void receiveBle(const std::string& fragment);
 private:

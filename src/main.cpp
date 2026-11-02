@@ -19,6 +19,7 @@ pet::Menu menu;
 pet::TouchButton button;
 pet::HoldGesture gesture;
 pet::Presence presence;
+pet::ApproachReaction approach;
 pet::Personality personality;
 pet::Query query;
 pet::AmbientDirector ambient;
@@ -45,9 +46,6 @@ bool joked=false,ambientReaction=false;
 const char* message=nullptr;
 const char* jokeMessage=nullptr;
 uint8_t nextWeatherPage=0,queryWeatherPage=0;
-uint32_t lastDistanceAt=0;
-float lastDistance=0;
-bool hadDistance=false;
 
 void loadSettings() {
     Preferences p;
@@ -108,7 +106,7 @@ void setup() {
     Serial.begin(115200);
     loadSettings(); sensors.begin();
     screenReady=screen.begin();
-    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet V3.1","Hola, Puente Alto!"); screen.show(); }
+    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet V3.1.1","Hola, Puente Alto!"); screen.show(); }
     else Serial.println("OLED no disponible: revisar alimentacion, SDA 8, SCL 9 y direccion 0x3C");
     const uint32_t now=millis();
     personality.begin(now); gesture.reset(now); ambient.begin(now);
@@ -116,13 +114,13 @@ void setup() {
     if(!study.begin())Serial.println("No se pudo iniciar modo estudio");
     appReady=app.begin(settings,study);
     if (!networkReady) Serial.println("No se pudo iniciar servicio de red");
-    Serial.println("MiniPet V3.1 iniciado. Boton: ajustes. App por WiFi :8080 o BLE.");
+    Serial.println("MiniPet V3.1.1 iniciado. Boton: ajustes. App por WiFi :8080 o BLE.");
 }
 void loop() {
-    const uint32_t now=millis();
+    uint32_t now=millis();
     const bool quiet=quietNow();
     const pet::Press press=button.update(sensors.touch(),now);
-    study.poll();study.read(studyState);
+    study.poll(studyState);
     const bool studying=studyState.active();
     if(studying!=wasStudying){
         query.cancel();message=nullptr;ambientReaction=false;gesture.reset(now);
@@ -139,13 +137,15 @@ void loop() {
             const auto previous=settings;settings=requested;
             if(!saveSettings()){settings=previous;app.updateSettings(settings);}
             if(screenReady)screen.brightness(settings.brightness);
+            if(settings.gestureMinCm!=previous.gestureMinCm||settings.gestureMaxCm!=previous.gestureMaxCm||
+                settings.gestureMs!=previous.gestureMs)gesture.reset(now);
             if(menu.active)menu.open(settings);
         }
         if(app.takeInteraction()){
             query.cancel();message=nullptr;ambientReaction=false;
             personality.interact(now,settings);ambient.note(now,0,settings,esp_random(),false);
         }
-        app.read(remoteContent,now);
+        app.read(remoteContent);
     }
     const bool remoteActive=remoteContent.type!=pet::app::Content::None;
     if(wasRemoteActive&&!remoteActive){ambient.note(now,0,settings,esp_random(),false);gesture.reset(now);}
@@ -198,20 +198,20 @@ void loop() {
         gesture.reset(now); ambient.note(now,0,settings,esp_random(),false);
     }
     if(appReady)app.localBusy(menu.active||studyMenu.active||network.configuring()||app.pairing());
+    now=millis(); // NVS, menus and network work may have taken time since loop entry.
     if (sensors.poll(now)) {
         presence.update(now,sensors.valid,sensors.cm,settings.presenceCm);
-        if (sensors.valid && hadDistance && pet::elapsed(now,lastDistanceAt)<350 &&
-            lastDistance-sensors.cm>25 && sensors.cm<45 && !menu.active && !query.active())
+        const bool allowApproach=!menu.active&&!network.configuring()&&!query.active()&&!remoteActive&&!studying;
+        if(approach.update(now,sensors.valid,sensors.cm,allowApproach))
             personality.react(pet::Mood::Shocked,now,1500);
-        hadDistance=sensors.valid;
-        if (sensors.valid) { lastDistance=sensors.cm; lastDistanceAt=now; }
         if (menu.active || network.configuring() || query.active() || remoteActive || studying) gesture.reset(now);
-        else if (gesture.update(now,sensors.valid,sensors.cm,settings)) startQuery(now,quiet);
+        else if (gesture.update(now,sensors.valid,sensors.cm,sensors.rawCm,settings)) startQuery(now,quiet);
     }
     personality.update(now,presence.present(),sensors.motion(now) && !menu.active && !query.active() && !remoteActive && !studying,settings);
     query.update(now);
     if (message && pet::elapsed(now,messageAt)>=messageDuration) message=nullptr;
     if (ambientReaction && pet::elapsed(now,ambientAt)>=2000) ambientReaction=false;
+    if(studyError&&pet::elapsed(now,studyErrorAt)>=2500)studyError=false;
     const auto mood=personality.mood(now);
     const bool awake=mood!=pet::Mood::Sleeping;
     const bool notices=awake && !quiet && !studying && settings.messages && settings.weatherNotices &&

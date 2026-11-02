@@ -42,30 +42,43 @@ Press TouchButton::update(bool active, Tick now) {
 }
 void HoldGesture::reset(Tick now) {
     armed_ = holding_ = outside_ = false;
-    outsideSince_ = holdSince_ = now;
-    sampled_ = false;
+    outsideSince_ = lastGood_ = lastSample_ = now;
+    heldMs_=0;sampled_=previousGood_=false;
 }
 bool HoldGesture::update(Tick now, bool valid, float cm, const Settings& s) {
-    if (sampled_ && elapsed(now,lastSample_) > 350) holding_ = outside_ = false;
+    return update(now,valid,cm,cm,s);
+}
+bool HoldGesture::update(Tick now,bool valid,float cm,float rawCm,const Settings& s) {
+    constexpr Tick grace=350;
+    const Tick delta=sampled_?elapsed(now,lastSample_):0;
+    if ((sampled_&&delta>grace)||(holding_&&elapsed(now,lastGood_)>grace)) {
+        holding_=outside_=previousGood_=false;heldMs_=0;
+    }
     lastSample_ = now; sampled_ = true;
-    const bool inside = valid && cm >= s.gestureMinCm && cm <= s.gestureMaxCm;
-    if (!inside) {
-        holding_ = false;
+    const bool usable=valid&&std::isfinite(cm)&&std::isfinite(rawCm)&&cm>=2&&cm<=400&&rawCm>=2&&rawCm<=400;
+    const float margin=holding_?3.f:0.f;
+    const bool inside=usable&&cm>=s.gestureMinCm-margin&&cm<=s.gestureMaxCm+margin&&
+        rawCm>=s.gestureMinCm-margin&&rawCm<=s.gestureMaxCm+margin;
+    const bool outside=usable&&((cm<s.gestureMinCm-3.f&&rawCm<s.gestureMinCm-3.f)||
+        (cm>s.gestureMaxCm+3.f&&rawCm>s.gestureMaxCm+3.f));
+    if (outside) {
+        holding_=previousGood_=false;heldMs_=0;
         if (!outside_) { outside_ = true; outsideSince_ = now; }
         if (elapsed(now, outsideSince_) >= 1000) armed_ = true;
         return false;
     }
     outside_ = false;
-    if (!armed_) return false;
-    if (!holding_ || std::fabs(cm - anchor_) > 10) {
-        holding_ = true; holdSince_ = now; anchor_ = cm;
-    }
-    if (elapsed(now, holdSince_) < s.gestureMs) return false;
-    armed_ = holding_ = false;
+    if(!inside||!armed_){previousGood_=false;return false;}
+    if(!holding_){holding_=true;heldMs_=0;}
+    else if(previousGood_)heldMs_+=delta;
+    previousGood_=true;lastGood_=now;
+    if(heldMs_<s.gestureMs)return false;
+    armed_=holding_=previousGood_=false;heldMs_=0;
     return true;
 }
 float HoldGesture::progress(Tick now, const Settings& s) const {
-    return holding_ ? std::min(1.0f, float(elapsed(now, holdSince_)) / s.gestureMs) : 0;
+    if(!holding_||elapsed(now,lastGood_)>350)return 0;
+    return std::min(1.0f,float(heldMs_)/s.gestureMs);
 }
 bool DistanceFilter::sample(float cm, Tick now) {
     if (!std::isfinite(cm) || cm < 2 || cm > 400) return false;
@@ -80,6 +93,8 @@ bool DistanceFilter::sample(float cm, Tick now) {
     return true;
 }
 bool Presence::update(Tick now, bool valid, float cm, uint16_t range) {
+    if(sampled_&&elapsed(now,lastSample_)>350)tracking_=false;
+    lastSample_=now;sampled_=true;
     // Hysteresis plus 600 ms entry / 2 s exit also tolerates missed echoes.
     const bool target = valid && cm < range + (present_ ? 8 : 0);
     if (target == present_) { tracking_ = false; return false; }
@@ -89,6 +104,31 @@ bool Presence::update(Tick now, bool valid, float cm, uint16_t range) {
     if (elapsed(now, candidateSince_) < (target ? 600u : 2000u)) return false;
     present_ = target; tracking_ = false;
     return true;
+}
+void PirMotion::begin(Tick now,Tick warmupMs) {
+    began_=changedAt_=now;warmup_=warmupMs;
+    warmed_=raw_=stable_=armed_=false;
+}
+bool PirMotion::update(bool high,Tick now) {
+    if(!warmed_){
+        if(elapsed(now,began_)<warmup_)return false;
+        warmed_=true;raw_=stable_=high;changedAt_=now;armed_=!high;return false;
+    }
+    if(high!=raw_){raw_=high;changedAt_=now;}
+    if(elapsed(now,changedAt_)<80)return false;
+    if(stable_==raw_){if(!raw_)armed_=true;return false;}
+    stable_=raw_;
+    if(!stable_){armed_=true;return false;}
+    const bool event=armed_;armed_=false;return event;
+}
+bool ApproachReaction::update(Tick now,bool valid,float cm,bool allow) {
+    valid=valid&&std::isfinite(cm)&&cm>=2&&cm<=400;
+    const bool react=allow&&valid&&hadSample_&&elapsed(now,lastSample_)<350&&previous_-cm>25&&cm<45&&
+        (!reacted_||elapsed(now,lastReaction_)>=3000);
+    hadSample_=valid;
+    if(valid){lastSample_=now;previous_=cm;}
+    if(react){reacted_=true;lastReaction_=now;}
+    return react;
 }
 void Query::start(Tick now, const Settings& s, bool joke, bool reaction) {
     count_ = index_ = 0;

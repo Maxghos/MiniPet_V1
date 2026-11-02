@@ -119,8 +119,9 @@ bool AppService::takeSettings(pet::Settings& s){bool result=false;if(xSemaphoreT
 bool AppService::takeInteraction(){bool result=false;if(xSemaphoreTake(mutex_,pdMS_TO_TICKS(2))==pdTRUE){result=interaction_;interaction_=false;xSemaphoreGive(mutex_);}return result;}
 void AppService::stop(){stopRequested_=true;}
 bool AppService::active(){bool result=false;if(xSemaphoreTake(mutex_,pdMS_TO_TICKS(2))==pdTRUE){result=playback_.active(millis());xSemaphoreGive(mutex_);}return result;}
-void AppService::read(pet::app::RemoteView& view,uint32_t now){
+void AppService::read(pet::app::RemoteView& view){
     if(xSemaphoreTake(mutex_,pdMS_TO_TICKS(2))!=pdTRUE)return;
+    const uint32_t now=millis(); // A command may have started playback after the caller's loop timestamp.
     if(stopRequested_.exchange(false)){playback_.stop();playingId_.clear();}
     playback_.expire(now);
     view.type=playback_.type(now);view.age=playback_.age(now);
@@ -175,7 +176,7 @@ void AppService::execute(JsonVariantConst req,JsonDocument& reply,const std::str
     if(op=="ping")return;
     if(op=="status"||op=="settings.get"){
         settingsJson(reply["settings"].to<JsonObject>(),settings_);reply["active"]=playback_.active(millis());
-        reply["storage"]=fsReady_;reply["ip"]=WiFi.localIP().toString();reply["firmware"]="3.1.0";
+        reply["storage"]=fsReady_;reply["ip"]=WiFi.localIP().toString();reply["firmware"]="3.1.1";
         JsonDocument studyRequest;studyRequest["op"]="study.get";
         study_->execute(studyRequest.as<JsonVariantConst>(),reply.as<JsonObject>());return;
     }

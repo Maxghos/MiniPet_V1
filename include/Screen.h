@@ -35,4 +35,7 @@ private:
     pet::Canvas canvas_;
     std::string messageText_;
     pet::text::Layout messageLayout_;
+    std::string scrollText_;
+    uint32_t scrollRevision_=0;
+    bool scrollCached_=false;
 };
