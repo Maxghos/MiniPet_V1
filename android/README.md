@@ -2,7 +2,7 @@
 
 Aplicación nativa en Kotlin y Jetpack Compose, Android **8.0/API 26 o posterior**. Wi-Fi local y BLE cifrado comparten el protocolo documentado en [PROTOCOLO_APP.md](../docs/PROTOCOLO_APP.md).
 
-**[Descargar APK MiniPet 3.2.0](../releases/android/MiniPet-3.2.0-debug.apk?raw=true)**. La copia verificada está en `releases/android` junto con su SHA-256. Conserva la firma de las APK anteriores publicadas. **Las demás APK/AAB, las claves de firma y los directorios de compilación están excluidos de Git.** Es una compilación de prueba firmada, paquete `cl.maxghos.minipet`, `versionCode=5`; no es una publicación en Google Play.
+**[Descargar APK MiniPet 3.2.1](../releases/android/MiniPet-3.2.1-debug.apk?raw=true)**. La copia verificada está en `releases/android` junto con su SHA-256. Conserva la firma de las APK anteriores publicadas. **Las demás APK/AAB, las claves de firma y los directorios de compilación están excluidos de Git.** Es una compilación de prueba firmada, paquete `cl.maxghos.minipet`, `versionCode=6`; no es una publicación en Google Play.
 
 ## Compilar en Android Studio
 

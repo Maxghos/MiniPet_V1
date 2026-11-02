@@ -18,6 +18,11 @@ fi
   -fsanitize=address,undefined -fno-omit-frame-pointer -g \
   -Itest/sensors -Iinclude src/Sensors.cpp src/PetCore.cpp test/sensors/test_sensors.cpp -o build/test_sensors
 ./build/test_sensors
+"${CXX:-g++}" -std=c++17 -Wall -Wextra -Werror -pedantic \
+  -fsanitize=address,undefined -fno-omit-frame-pointer -g \
+  -Itest/services -Iinclude -I"$json_dir" src/Agenda.cpp src/AgendaService.cpp src/PetCore.cpp \
+  test/services/test_agenda_service.cpp -o build/test_agenda_service
+./build/test_agenda_service
 python3 tools/test_timezone.py
 python3 tools/generate_phrases.py --check
 python3 tools/generate_telegram_trust.py --check

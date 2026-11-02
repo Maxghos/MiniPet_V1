@@ -21,9 +21,9 @@ public:
 private:
     static void taskEntry(void* owner);
     void run();
-    bool api(const std::string& token,const char* method,JsonDocument& args,JsonDocument& output);
+    bool api(const std::string& token,const char* method,JsonDocument& args,JsonDocument& output,const AgendaNotice* notice=nullptr);
     void handle(const pet::telegram::Input& input,const std::string& token);
-    bool send(const std::string& token,int64_t chat,const std::string& text,JsonVariantConst keyboard=JsonVariantConst{});
+    bool send(const std::string& token,int64_t chat,const std::string& text,JsonVariantConst keyboard=JsonVariantConst{},const AgendaNotice* notice=nullptr);
     bool save(const std::string& token,int64_t chat,int64_t user,bool enabled,bool studyAlerts,bool reminderAlerts,bool summaryAlerts);
     void status(JsonObject out);
     SemaphoreHandle_t mutex_=nullptr;
@@ -35,6 +35,6 @@ private:
     std::atomic<uint32_t> generation_{0};
     std::atomic<bool> ready_{false},paired_{false},localBusy_{false};
     std::atomic<bool> quiet_{false},interaction_{false};
-    std::atomic<int> code_{0};unsigned retryAfter_=3;
+    std::atomic<int> code_{0};pet::telegram::RetryWindow retry_;
     uint32_t workerGeneration_=UINT32_MAX;
 };

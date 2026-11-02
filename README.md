@@ -1,6 +1,8 @@
-# MiniPet V3.2 · ESP32-S3 + Android + Telegram
+# MiniPet V3.2.1 · ESP32-S3 + Android + Telegram
 
 Mascota de escritorio con ojos animados en una OLED **SSD1306 I²C de 128×32**, sensores PIR y ultrasónico, reloj de Santiago y clima de Puente Alto.
+
+**Mantenimiento 3.2.1:** agenda separada de la biblioteca, importación de los datos anteriores, copia de recuperación y reintento de guardados fallidos; esperas de Telegram respetadas también al enviar avisos; ajustes de conexión, fechas y mensajes de la app. [Cambios y comprobaciones](docs/VALIDACION.md#v321-correcciones-y-ajustes-menores).
 
 **[Funciones adicionales](docs/FUNCIONES_ADICIONALES.md):** Telegram conectado a Pomodoro, actividades del día, recordatorios puntuales/diarios, resumen de estudio y cuatro pequeñas actividades espontáneas. Todo se guarda y ejecuta en el ESP32; la app incorpora **Día**. El bot se configura con tu propio token por BLE cifrado y se vincula a tu cuenta mediante un PIN físico. El repositorio y las APK no incluyen datos personales ni un token preconfigurado.
 
@@ -10,7 +12,7 @@ Se conservan los **[ajustes de sensores de 3.1.1](docs/AJUSTES_3_1_1.md)**: gest
 
 La app Android nativa amplía MiniPet por Wi-Fi local o BLE, con mensajes, imágenes/GIF/vídeos adaptados, biblioteca, estudio y ajustes. Conectarse no cambia su comportamiento. **[Instalación y uso de la app](docs/APP_ANDROID.md)** · **[Proyecto Android](android/README.md)** · **[Protocolo](docs/PROTOCOLO_APP.md)**.
 
-**[Descargar APK MiniPet 3.2.0](releases/android/MiniPet-3.2.0-debug.apk?raw=true)** para Android 8.0 o superior. Actualiza primero el firmware. Se instala encima de las APK anteriores publicadas: conserva paquete y firma. Es una compilación de prueba firmada, guardada en `releases/android` junto con su SHA-256. Las claves de firma y los archivos generados por las compilaciones siguen excluidos.
+**[Descargar APK MiniPet 3.2.1](releases/android/MiniPet-3.2.1-debug.apk?raw=true)** para Android 8.0 o superior. Actualiza primero el firmware. Se instala encima de las APK anteriores publicadas: conserva paquete y firma. Es una compilación de prueba firmada, guardada en `releases/android` junto con su SHA-256. Las claves de firma y los archivos generados por las compilaciones siguen excluidos.
 
 El **TTP223 se reserva para ajustes**. Fuera del modo estudio, una presencia sostenida en la zona del HC-SR05 solicita **clima → reacción de la mascota → hora → pantalla habitual**. El humor regula la iniciativa, las expresiones y los comentarios de la mascota; las consultas siempre se completan. La reacción se omite con el asistente desactivado, No molestar, datos anteriores o pronóstico de próximos días.
 

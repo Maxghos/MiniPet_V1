@@ -9,7 +9,7 @@ args=['/workspace/android-tools/gradle-8.9/bin/gradle','-p',str(repo/'android'),
 subprocess.run(args,env=environment,check=True)
 source=repo/'android/app/build/outputs/apk/debug/app-debug.apk'
 exports=Path('/workspace/artifacts');exports.mkdir(exist_ok=True)
-apk=exports/'MiniPet-3.2.0-debug.apk';shutil.copy2(source,apk)
+apk=exports/'MiniPet-3.2.1-debug.apk';shutil.copy2(source,apk)
 checksum=hashlib.sha256(apk.read_bytes()).hexdigest()
 (apk.with_suffix('.apk.sha256')).write_text(f'{checksum}  {apk.name}\n')
 print(f'APK exported outside Git: {apk}')

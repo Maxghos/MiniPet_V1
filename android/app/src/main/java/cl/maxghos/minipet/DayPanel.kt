@@ -19,7 +19,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 @Composable private fun DateInput(value: String,enabled: Boolean,onChange:(String)->Unit){
-    OutlinedTextField(value=value,onValueChange={onChange(it.filter(Char::isDigit).take(8))},label={Text("Fecha AAAAMMDD · vacío = hoy")},
+    OutlinedTextField(value=value,onValueChange={onChange(it.filter(Char::isDigit).take(8))},label={Text("Fecha AAAAMMDD · opcional")},
         singleLine=true,enabled=enabled,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),modifier=Modifier.fillMaxWidth())
 }
 @Composable fun DayPanel(model: MiniPetModel){
@@ -45,12 +45,14 @@ import org.json.JSONObject
         }
     }
     Text(if(ready)"Hora de Santiago · ${dayLabel(today)}" else "Esperando hora de Santiago. Conecta MiniPet a internet para sincronizar.",style=MaterialTheme.typography.labelMedium)
-    if(agenda.has("persisted")&&!agenda.optBoolean("persisted"))Text("La agenda está en memoria, pero no se pudo guardar para un reinicio.",color=MaterialTheme.colorScheme.error)
+    if(agenda.optBoolean("loadError"))Text("No se pudo recuperar la agenda guardada. Revisa tus actividades antes de añadir cambios.",color=MaterialTheme.colorScheme.error)
+    else if(agenda.has("persisted")&&!agenda.optBoolean("persisted"))Text("La agenda está en memoria. MiniPet reintentará guardarla para un reinicio.",color=MaterialTheme.colorScheme.error)
+    if(agenda.optBoolean("recovered"))Text("Agenda recuperada desde una copia válida. Revisa si falta algún cambio reciente.",style=MaterialTheme.typography.bodySmall)
     OutlinedButton(onClick={model.loadDay()},enabled=enabled){Text("Sincronizar día y Telegram")}
     when(s.dayTab){
     0->{
         Panel("Actividades del día"){
-            Text("Una lista compartida entre MiniPet, la app y tu bot. Hasta 24 actividades guardadas.")
+            Text("Una lista compartida entre MiniPet, la app y tu bot. Hasta 24 actividades guardadas. Sin fecha, se usa hoy.")
             OutlinedTextField(value=s.taskTitle,onValueChange={v->if(v.toByteArray().size<=96)model.edit{it.copy(taskTitle=v.replace('\n',' '))}},label={Text("¿Qué quieres hacer?")},singleLine=true,enabled=enabled,modifier=Modifier.fillMaxWidth())
             DateInput(s.taskDay,enabled){v->model.edit{it.copy(taskDay=v)}}
             Button(onClick={model.addTask()},enabled=enabled&&ready&&s.taskTitle.isNotBlank(),modifier=Modifier.fillMaxWidth()){Text("Añadir actividad")}
@@ -125,13 +127,13 @@ import org.json.JSONObject
     if(clear)AlertDialog(onDismissRequest={clear=false},title={Text("¿Borrar la vinculación de Telegram?")},text={Text("Se eliminan el token y la cuenta autorizada del ESP32. Tu bot seguirá existiendo en Telegram.")},
         confirmButton={TextButton(onClick={model.clearTelegram();clear=false},enabled=!s.busy){Text("Borrar de MiniPet")}},dismissButton={TextButton(onClick={clear=false}){Text("Cancelar")}})
     Panel("Telegram personal"){
-        val status=when{!t.optBoolean("configured")->"Sin configurar";!t.optBoolean("enabled",true)->"Desactivado";t.optInt("code")==401->"Token no válido: revisa BotFather";t.optInt("code")==409->"Otro cliente o webhook está usando este bot";!t.optBoolean("ready")->"Conectando: revisa Wi-Fi, hora y acceso a Telegram";!t.optBoolean("linked")->"Listo para vincular desde la OLED";else->"Vinculado a tu cuenta"}
+        val status=when{!t.optBoolean("configured")->"Sin configurar";!t.optBoolean("enabled",true)->"Desactivado";t.optInt("code")==401->"Token no válido: revisa BotFather";t.optInt("code")==409->"Otro cliente o webhook está usando este bot";t.optInt("code")==429->"Telegram pidió esperar. MiniPet reintentará automáticamente.";!t.optBoolean("ready")->"Conectando: revisa Wi-Fi, hora y acceso a Telegram";!t.optBoolean("linked")->"Listo para vincular desde la OLED";else->"Vinculado a tu cuenta"}
         Text(status,fontWeight=FontWeight.Bold)
         Text("Crea un bot propio con @BotFather y copia su token. Lo introduces aquí una vez; MiniPet no lo devuelve al consultar el estado.")
-        if(!s.bluetooth)Text("Para guardar el token, conecta la app por BLE cifrado. Después puedes usar Wi-Fi para la agenda y los ajustes.",color=MaterialTheme.colorScheme.secondary)
+        if(!s.secureConfiguration)Text("Para guardar el token, conecta la app por BLE cifrado. Después puedes usar Wi-Fi para la agenda y los ajustes.",color=MaterialTheme.colorScheme.secondary)
         OutlinedTextField(value=s.telegramToken,onValueChange={v->model.edit{it.copy(telegramToken=v.take(100))}},label={Text("Token de BotFather")},singleLine=true,
-            enabled=s.bluetooth&&!s.busy,visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,autoCorrectEnabled=false),modifier=Modifier.fillMaxWidth())
-        Button(onClick={model.configureTelegram()},enabled=s.bluetooth&&!s.busy&&s.telegramToken.isNotBlank(),modifier=Modifier.fillMaxWidth()){Text("Guardar token por BLE")}
+            enabled=s.secureConfiguration&&!s.busy,visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,autoCorrectEnabled=false),modifier=Modifier.fillMaxWidth())
+        Button(onClick={model.configureTelegram()},enabled=s.secureConfiguration&&!s.busy&&s.telegramToken.isNotBlank(),modifier=Modifier.fillMaxWidth()){Text("Guardar token por BLE")}
         Text("Con MiniPet en internet, espera a que esté listo y abre Ajustes → Vincular Telegram en la OLED. Envía /vincular seguido de ese PIN al bot. Solo la cuenta vinculada podrá controlarlo.")
         val name=t.optString("username")
         if(name.matches(Regex("[A-Za-z0-9_]{5,64}")))OutlinedButton(onClick={context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://t.me/$name")))},enabled=!s.busy){Text("Abrir @$name")}

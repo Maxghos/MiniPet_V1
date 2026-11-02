@@ -7,6 +7,10 @@ void publicState(JsonObject out,const PublicState& s){
     out["configured"]=s.configured;out["linked"]=s.linked;out["enabled"]=s.enabled;out["ready"]=s.ready;out["pairing"]=s.pairing;
     out["username"]=s.username;out["code"]=s.code;out["studyAlerts"]=s.studyAlerts;out["reminderAlerts"]=s.reminderAlerts;out["summaryAlerts"]=s.summaryAlerts;
 }
+void RetryWindow::failure(Tick now,int code,unsigned retryAfter){
+    const unsigned seconds=code==429?std::clamp(retryAfter,3u,600u):code==401||code==409?60u:15u;
+    defer(now,seconds*1000u);
+}
 bool validToken(const std::string& token){
     const auto colon=token.find(':');if(colon<5||colon>16||token.size()<colon+26||token.size()>100)return false;
     for(size_t i=0;i<token.size();++i){const unsigned char c=token[i];
@@ -24,7 +28,10 @@ bool parseClock(const std::string& s,unsigned& minute){
 }
 Input Gate::accept(JsonVariantConst update,int64_t epoch,Tick now){
     Input result;if(!update["update_id"].is<int64_t>())return result;
-    const auto id=update["update_id"].as<int64_t>();if(id<0||id==INT64_MAX||id<=lastUpdate_)return result;lastUpdate_=id;
+    const auto id=update["update_id"].as<int64_t>();if(id<0||id==INT64_MAX)return result;
+    if(idleWeek(epoch))lastUpdate_=-1;
+    if(id<=lastUpdate_)return result;
+    lastUpdate_=id;lastEpoch_=epoch;
     const bool callback=update["callback_query"].is<JsonObjectConst>();
     auto msg=callback?update["callback_query"]["message"]:update["message"];
     auto from=callback?update["callback_query"]["from"]:msg["from"];

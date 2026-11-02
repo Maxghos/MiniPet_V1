@@ -5,8 +5,8 @@ Esta versión añade Telegram personal, actividades del día, recordatorios, res
 ## Instalar
 
 1. Descarga el proyecto actualizado y abre su raíz en VS Code/PlatformIO.
-2. Ejecuta **Build → Upload** en `esp32s3`, o `esp32s3-button` si usas pulsador mecánico. El saludo muestra **MiniPet V3.2**.
-3. Instala la [APK 3.2.0](../releases/android/MiniPet-3.2.0-debug.apk?raw=true) encima de la anterior. Mantiene paquete y certificado de firma; no hace falta desinstalar. El cableado, Wi-Fi y ajustes existentes se conservan.
+2. Ejecuta **Build → Upload** en `esp32s3`, o `esp32s3-button` si usas pulsador mecánico. El saludo muestra **MiniPet V3.2.1**.
+3. Instala la [APK 3.2.1](../releases/android/MiniPet-3.2.1-debug.apk?raw=true) encima de la anterior. Mantiene paquete y certificado de firma; no hace falta desinstalar. El cableado, Wi-Fi y ajustes existentes se conservan.
 4. En la app, conecta MiniPet y abre **Día**. Allí están **Actividades, Avisos, Resumen y Telegram**. Texto, imágenes y biblioteca ahora están juntos en **Enviar**.
 
 ## Actividades del día
@@ -34,6 +34,8 @@ Los avisos se muestran paginados en la OLED cuando no interrumpen ajustes, una c
 El resumen automático está activado inicialmente a las **20:30**, configurable. Refleja lo acumulado hasta ese momento; puedes consultar el resumen actualizado después. Se prepara una vez por día, con un aviso corto en la OLED y el detalle en Telegram si lo habilitaste. No molestar también lo suprime. Si se enciende más de una hora después de la hora prevista, no se envía un resumen automático atrasado. `/resumen` y la app siguen disponibles.
 
 El tiempo se contabiliza por intervalos de aproximadamente un segundo. Las estadísticas se guardan periódicamente, hasta una vez por minuto mientras cambian, y al modificar la agenda. Un corte de alimentación puede perder el avance posterior al último guardado. Se mide tiempo del temporizador, no tu atención ni el uso del ordenador.
+
+En 3.2.1, la agenda se separa de la biblioteca y se importa la guardada en 3.2.0. Si falla una escritura, se reintenta cada cinco segundos; se conserva la última copia válida y puede recuperarse un temporal completo tras un reinicio. La app avisa cuando se recuperó una copia o no se pudieron leer los datos. Una copia anterior puede perder los cambios más recientes. Guardar opciones sin cambios no vuelve a escribir la flash.
 
 ## Vincular tu propio Telegram
 
@@ -73,7 +75,9 @@ Puedes desactivar Telegram, elegir avisos de Pomodoro/recordatorios/resumen o **
 
 Los botones de Pomodoro llevan la revisión de estado: si la etapa cambió mientras decidías, se rechaza la acción antigua y puedes pedir `/estudio` otra vez. No se duplican temporizadores entre Telegram y la app. Los menús físicos mantienen prioridad: desde Telegram se puede pausar o terminar, pero hay que cerrarlos para empezar, continuar o saltar.
 
-El bot funciona directamente desde el ESP32 mediante consultas HTTPS en segundo plano. Al reiniciar o reconectar **se descartan las órdenes pendientes anteriores**; espera a que MiniPet esté disponible y reenvía la orden. Las solicitudes repetidas por Telegram no se ejecutan dos veces por el mismo identificador de actualización. Los avisos automáticos tienen cola acotada, vencimiento y un máximo de tres intentos: Pomodoro vence a los dos minutos, recordatorios a los 15 minutos y resumen a la hora. La red no garantiza entrega exacta ni inmediata; un fallo después de aceptar un mensaje puede producir una repetición al reintentar.
+El bot funciona directamente desde el ESP32 mediante consultas HTTPS en segundo plano. Al reiniciar, cambiar la vinculación o detectar la reconexión de Wi-Fi **se descartan las órdenes pendientes anteriores**; espera a que MiniPet esté disponible y reenvía la orden. Un error transitorio de la API mantiene la posición de lectura: las órdenes de texto siguen necesitando menos de dos minutos de antigüedad. Las solicitudes repetidas no se ejecutan dos veces por el mismo identificador; se admite el reinicio de secuencia que Telegram permite tras una semana sin actualizaciones. Las esperas por 429 se aplican a todas las peticiones del bot, incluidos envíos y respuestas a botones.
+
+Los avisos automáticos tienen cola acotada, vencimiento y un máximo de tres intentos: Pomodoro vence a los dos minutos, recordatorios a los 15 minutos y resumen a la hora. Se vuelven a comprobar silencio, preferencias y caducidad antes de enviarlos. La red no garantiza entrega exacta ni inmediata; un fallo después de aceptar un mensaje puede producir una repetición al reintentar.
 
 ## Pequeñas actividades espontáneas
 

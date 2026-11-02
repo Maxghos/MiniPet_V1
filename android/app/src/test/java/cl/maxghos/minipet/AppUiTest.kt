@@ -109,5 +109,19 @@ class AppUiTest {
         val model=ViewModelProvider(compose.activity)[MiniPetModel::class.java]
         compose.runOnIdle{model.edit{it.copy(telegramToken="private-input")};model.foreground(false)}
         assertEquals("",model.state.telegramToken)
+        compose.runOnIdle{model.edit{it.copy(connected=true,secureConfiguration=true,telegramToken="private-input")};model.disconnect()}
+        assertEquals("",model.state.telegramToken);assertFalse(model.state.secureConfiguration)
+    }
+    @Test fun telegramUsesTheActiveTransportRatherThanTheSearchSelection(){
+        val model=ViewModelProvider(compose.activity)[MiniPetModel::class.java]
+        val data=org.json.JSONObject(javaClass.getResourceAsStream("/additional.json")!!.bufferedReader().readText())
+        compose.runOnIdle{model.edit{it.copy(tab=2,dayTab=3,connected=true,additionalSupported=true,
+            agenda=data.getJSONObject("agenda").toString(),telegram=data.getJSONObject("telegram").toString(),
+            bluetooth=false,secureConfiguration=true,telegramToken="private-input")}}
+        compose.onNodeWithText("Token de BotFather").assertIsEnabled()
+        compose.onNodeWithText("Guardar token por BLE").assertIsEnabled()
+        compose.runOnIdle{model.edit{it.copy(bluetooth=true,secureConfiguration=false)}}
+        compose.onNodeWithText("Token de BotFather").assertIsNotEnabled()
+        compose.onNodeWithText("Guardar token por BLE").assertIsNotEnabled()
     }
 }

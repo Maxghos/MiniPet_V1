@@ -85,6 +85,7 @@ void pairingOwnerAndReplay(){
     for(int i=0;i<5;++i){msg=update(i,123,"/vincular 000000");CHECK(attempts.accept(msg.as<JsonVariantConst>(),1793613600,100).kind==telegram::Kind::RejectedPair);}
     CHECK(!attempts.pairing(101));msg=update(6,123,"/vincular 392761");CHECK(attempts.accept(msg.as<JsonVariantConst>(),1793613600,200).kind==telegram::Kind::Ignore);
     attempts.open("392761",0);CHECK(!attempts.pairing(120000));
+    CHECK(!attempts.pairing(0)); // an expired PIN must stay closed after millis() wraps
 }
 void commandAllowlistAndButtons(){
     ++groups;JsonDocument req;std::string error;unsigned minute;
@@ -126,7 +127,34 @@ void scenesAndBudget(){
     director.note(3000000,2200,s,0);CHECK(director.poll(3001000,s,true,false,false,0,false,true)==Ambient::None);
     CHECK(director.poll(6000000,s,false,false,false,0,false,true)==Ambient::None);
 }
+void telegramBackoffAndLongIdle(){
+    ++groups;telegram::RetryWindow retry;
+    CHECK(retry.remaining(100)==0);retry.failure(100,429,30);
+    CHECK(retry.remaining(100)==30000);CHECK(retry.remaining(30099)==1);CHECK(retry.remaining(30100)==0);
+    CHECK(retry.remaining(100)==0); // an expired cooldown must not return a counter cycle later
+    retry.failure(40000,429,1);CHECK(retry.remaining(40000)==3000);
+    retry.failure(41000,401);CHECK(retry.remaining(41000)==60000);
+    retry.defer(42000,1000);CHECK(retry.remaining(42000)==59000); // a later call cannot shorten a server wait
+    retry.failure(43000,429,100000);CHECK(retry.remaining(43000)==600000);
+    retry.clear();CHECK(retry.remaining(44000)==0);
+    const Tick start=UINT32_MAX-1000;retry.failure(start,500);
+    CHECK(retry.remaining(start+5000)==10000);CHECK(retry.remaining(start+15000)==0);
+    telegram::Gate gate;gate.owner(123,123);constexpr int64_t epoch=1793613600,week=7*86400;
+    auto msg=update(9000,123,"/estudio",epoch);CHECK(gate.accept(msg.as<JsonVariantConst>(),epoch,0).kind==telegram::Kind::Command);
+    CHECK(gate.offset(epoch+week-1)==9001);CHECK(gate.offset(epoch+week)==0);
+    msg=update(12,123,"/estudio",epoch+week);CHECK(gate.accept(msg.as<JsonVariantConst>(),epoch+week,0).kind==telegram::Kind::Command);
+    CHECK(gate.offset(epoch+week)==13);CHECK(gate.accept(msg.as<JsonVariantConst>(),epoch+week,0).kind==telegram::Kind::Ignore);
+    gate.drain(3,epoch+week*2);CHECK(gate.offset(epoch+week*2)==4);
+    msg=update(4,123,"/estudio",epoch);CHECK(gate.accept(msg.as<JsonVariantConst>(),epoch+week*2,0).kind==telegram::Kind::Ignore);
+}
+void unchangedAgendaDoesNotWearFlash(){
+    ++groups;agenda::Book book;
+    request(book,R"({"op":"task.add","title":"Leer"})");const auto revision=book.revision();
+    CHECK(request(book,R"({"op":"task.today","id":1})")["ok"].as<bool>());CHECK(book.revision()==revision);
+    CHECK(request(book,R"({"op":"agenda.options","dailySummary":true,"summaryMinute":1230,"scenes":true})")["ok"].as<bool>());
+    CHECK(book.revision()==revision);
+}
 }
 void testAdditional(unsigned& suites,unsigned& assertions){
-    taskLifecycleAndPersistence();reminderSchedulesAndQuiet();accountingAcrossSessionsAndDates();pairingOwnerAndReplay();commandAllowlistAndButtons();scenesAndBudget();suites+=groups;assertions+=checks;
+    taskLifecycleAndPersistence();reminderSchedulesAndQuiet();accountingAcrossSessionsAndDates();pairingOwnerAndReplay();commandAllowlistAndButtons();scenesAndBudget();telegramBackoffAndLongIdle();unchangedAgendaDoesNotWearFlash();suites+=groups;assertions+=checks;
 }

@@ -14,7 +14,8 @@ struct AgendaNotice {
 pet::agenda::Moment agendaMoment();
 class AgendaService {
 public:
-    bool begin(bool storage);
+    using MomentClock=pet::agenda::Moment(*)();
+    bool begin(bool storage,MomentClock clock=agendaMoment);
     void poll(const pet::study::Snapshot& study,const pet::agenda::Totals& totals,const pet::Settings& settings);
     void execute(JsonVariantConst request,JsonObject reply);
     bool takeDisplay(std::string& output);
@@ -23,6 +24,7 @@ public:
     void clearTelegram();
     bool scenes() const { return scenes_; }
 private:
+    bool load(const char* path);
     bool save();
     void enqueue(const std::string& text,uint8_t kind,uint32_t ttl);
     SemaphoreHandle_t mutex_=nullptr;
@@ -32,5 +34,7 @@ private:
     bool storage_=false,persisted_=true,seenStudy_=false;
     pet::agenda::Totals observed_;
     bool dirtyStats_=false;
+    bool pendingSave_=false,primaryValid_=false,recovered_=false,loadError_=false;
     std::atomic<bool> scenes_{true};
+    MomentClock clock_=agendaMoment;
 };

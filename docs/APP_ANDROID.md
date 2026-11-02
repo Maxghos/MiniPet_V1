@@ -2,13 +2,13 @@
 
 ## 1. Actualizar MiniPet
 
-Descarga el proyecto completo actualizado, abre su raíz en VS Code/PlatformIO y ejecuta **esp32s3 → General → Build**, después **Upload**. Para un pulsador mecánico usa `esp32s3-button`. El saludo dice **MiniPet V3.2**; el menú incluye **Vincular app**, **Modo estudio** y **Vincular Telegram**. Conserva los ajustes de sensores de 3.1.1.
+Descarga el proyecto completo actualizado, abre su raíz en VS Code/PlatformIO y ejecuta **esp32s3 → General → Build**, después **Upload**. Para un pulsador mecánico usa `esp32s3-button`. El saludo dice **MiniPet V3.2.1**; el menú incluye **Vincular app**, **Modo estudio** y **Vincular Telegram**. Conserva los ajustes de sensores de 3.1.1.
 
 El cableado es el mismo. La configuración y el Wi-Fi de V1/V2 se conservan. No necesitas borrar la flash. En el primer arranque se inicializa la partición de archivos que las versiones anteriores de MiniPet no utilizaban; allí se guarda la nueva biblioteca, separada de los ajustes NVS.
 
 ## 2. Instalar la APK
 
-**[Descarga la APK MiniPet 3.2.0](../releases/android/MiniPet-3.2.0-debug.apk?raw=true)** y ábrela en tu teléfono Android 8.0 o superior. Autoriza la instalación desde tu navegador/gestor de archivos si Android lo solicita. No necesitas Android Studio ni Expo. Puedes instalarla sobre las APK anteriores publicadas: mantiene paquete y firma. Esta APK es una compilación de prueba firmada, disponible en el repositorio; no se publica en una tienda. Su SHA-256 está en la misma carpeta `releases/android`.
+**[Descarga la APK MiniPet 3.2.1](../releases/android/MiniPet-3.2.1-debug.apk?raw=true)** y ábrela en tu teléfono Android 8.0 o superior. Autoriza la instalación desde tu navegador/gestor de archivos si Android lo solicita. No necesitas Android Studio ni Expo. Puedes instalarla sobre las APK anteriores publicadas: mantiene paquete y firma. Esta APK es una compilación de prueba firmada, disponible en el repositorio; no se publica en una tienda. Su SHA-256 está en la misma carpeta `releases/android`.
 
 ## 3. Vincular por Wi-Fi (recomendado)
 

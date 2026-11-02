@@ -22,7 +22,7 @@ data class DeviceAsset(val id: String,val title: String,val frames: Int,val fps:
 data class AppState(
     val tab: Int=0,val sendTab: Int=0,val address: String="192.168.4.1:8080",val pin: String="",
     val bluetooth: Boolean=false,val devices: List<FoundDevice> = emptyList(),
-    val connected: Boolean=false,val connectionName: String="",val busy: Boolean=false,
+    val connected: Boolean=false,val connectionName: String="",val busy: Boolean=false,val secureConfiguration: Boolean=false,
     val scanning: Boolean=false,val progress: Float=0f,val notice: String="",val error: Boolean=false,
     val source: MediaImporter.Source?=null,val options: RenderOptions=RenderOptions(),
     val start: Float=0f,val seconds: Float=5f,val fps: Int=10,val prepared: ByteArray?=null,val preparedId: String?=null,
@@ -78,7 +78,7 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
         val transport=if(selected.bluetooth){
             val manager=context.getSystemService(BluetoothManager::class.java)
             @SuppressLint("MissingPermission") val remote=manager.adapter.getRemoteDevice(selected.address)
-            BleTransport(context,remote).also{it.connect()}
+            BleTransport(context,remote).also{try{it.connect()}catch(error:Exception){it.close();throw error}}
         }else HttpTransport(endpoint){wifiConnection(context,it)}
         val candidate=DeviceClient(transport,vault.load(endpoint))
         try{
@@ -88,7 +88,7 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
             client?.close();heartbeat?.cancel();client=candidate
             if(!selected.bluetooth)vault.address=endpoint
             state=state.copy(connected=true,connectionName=if(selected.bluetooth)"Bluetooth BLE" else endpoint,
-                settings=response.getJSONObject("settings").toString(),pin="",bluetooth=selected.bluetooth,
+                settings=response.getJSONObject("settings").toString(),pin="",bluetooth=selected.bluetooth,secureConfiguration=transport.secureConfiguration,
                 studySupported=response.has("study"),study=null,studyDirty=false,
                 additionalSupported=response.optBoolean("additional"),agenda="{}",telegram="{}",dayOptionsDirty=false,telegramToken="")
             response.optJSONObject("study")?.let{acceptStudy(StudyStatus.parse(it,SystemClock.elapsedRealtime()))}
@@ -102,16 +102,19 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
                         }
                     }catch(error:CancellationException){throw error}
                     catch(_:Exception){
-                        if(client===candidate){client=null;candidate.close();state=state.copy(connected=false);announce("Conexión perdida. MiniPet continúa por su cuenta.",true)}
+                        if(client===candidate){client=null;candidate.close();state=state.copy(connected=false,secureConfiguration=false,telegramToken="");announce("Conexión perdida. MiniPet continúa por su cuenta.",true)}
                         break
                     }
                 }
             }
             if(response.optBoolean("storage"))refreshRemote()
             announce(if(response.optBoolean("storage"))"Conectado. MiniPet sigue a su ritmo." else "Conectado. Texto y ajustes disponibles; revisa la biblioteca en el dispositivo.")
-        }catch(error:Exception){candidate.close();throw error}
+        }catch(error:Exception){
+            if(client===candidate){heartbeat?.cancel();client=null;state=state.copy(connected=false,secureConfiguration=false,telegramToken="")}
+            candidate.close();throw error
+        }
     }
-    fun disconnect(){heartbeat?.cancel();client?.close();client=null;state=state.copy(connected=false);announce("Desconectado. MiniPet continúa por su cuenta.")}
+    fun disconnect(){heartbeat?.cancel();client?.close();client=null;state=state.copy(connected=false,secureConfiguration=false,telegramToken="");announce("Desconectado. MiniPet continúa por su cuenta.")}
     private fun acceptStudy(value: StudyStatus){
         val previous=state.study
         state=state.copy(study=value,studyDraft=if(!state.studyDirty||value.active)StudyDraft.from(value.config) else state.studyDraft,
@@ -256,10 +259,12 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
     fun saveDayOptions()=work("Guardando opciones del día…"){
         val minute=parseClockMinute(state.summaryTime)?:throw DeviceFailure("Usa una hora HH:MM válida")
         val reply=linked().call("agenda.options",JSONObject().put("summaryMinute",minute).put("dailySummary",state.dailySummary).put("scenes",state.scenes))
-        state=state.copy(dayOptionsDirty=false);acceptAdditional(reply);announce("Opciones guardadas")
+        state=state.copy(dayOptionsDirty=false);acceptAdditional(reply)
+        val persisted=reply.optJSONObject("agenda")?.optBoolean("persisted",true)!=false
+        announce(if(persisted)"Opciones guardadas" else "Opciones aplicadas en memoria. No se pudieron guardar; MiniPet reintentará.",!persisted)
     }
     fun configureTelegram()=work("Guardando Telegram por BLE…"){
-        require(state.bluetooth){"Para guardar el token, conecta MiniPet por BLE cifrado"}
+        require(state.connected&&state.secureConfiguration){"Para guardar el token, conecta MiniPet por BLE cifrado"}
         val token=state.telegramToken.trim();state=state.copy(telegramToken="")
         require(token.length in 32..100){"Revisa el token de BotFather"}
         acceptAdditional(AdditionalClient(linked()).configureTelegram(token))

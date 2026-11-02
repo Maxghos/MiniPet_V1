@@ -116,7 +116,7 @@ void setup() {
     Serial.begin(115200);
     loadSettings(); sensors.begin();
     screenReady=screen.begin();
-    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet V3.2","Hola, Puente Alto!"); screen.show(); }
+    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet V3.2.1","Hola, Puente Alto!"); screen.show(); }
     else Serial.println("OLED no disponible: revisar alimentacion, SDA 8, SCL 9 y direccion 0x3C");
     const uint32_t now=millis();
     personality.begin(now); gesture.reset(now); ambient.begin(now);
@@ -124,7 +124,7 @@ void setup() {
     if(!study.begin())Serial.println("No se pudo iniciar modo estudio");
     appReady=app.begin(settings,study,agenda,telegram);
     if (!networkReady) Serial.println("No se pudo iniciar servicio de red");
-    Serial.println("MiniPet V3.2 iniciado. Boton: ajustes. App por WiFi :8080 o BLE.");
+    Serial.println("MiniPet V3.2.1 iniciado. Boton: ajustes. App por WiFi :8080 o BLE.");
 }
 void loop() {
     uint32_t now=millis();

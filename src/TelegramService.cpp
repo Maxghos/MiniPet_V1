@@ -82,16 +82,23 @@ bool TelegramService::pairing(){
 }
 unsigned TelegramService::pairingSeconds(){return pairing()?(120000-uint32_t(millis()-pairAt_))/1000:0;}
 void TelegramService::taskEntry(void* self){static_cast<TelegramService*>(self)->run();}
-bool TelegramService::api(const std::string& token,const char* method,JsonDocument& args,JsonDocument& output){
+bool TelegramService::api(const std::string& token,const char* method,JsonDocument& args,JsonDocument& output,const AgendaNotice* notice){
+    if(workerGeneration_!=generation_||retry_.remaining(millis()))return false;
+    NetworkGuard guard;if(!guard){retry_.defer(millis(),1000);return false;}
     if(workerGeneration_!=generation_)return false;
-    NetworkGuard guard;if(!guard){retryAfter_=1;return false;}
-    if(workerGeneration_!=generation_)return false;
+    if(notice){
+        if(xSemaphoreTake(mutex_,pdMS_TO_TICKS(20))!=pdTRUE)return false;
+        const bool allowed=enabled_&&!quiet_&&token==token_&&args["chat_id"].as<int64_t>()==gate_.chat()&&
+            pet::elapsed(millis(),notice->created)<notice->ttl&&(notice->kind==2?studyAlerts_:notice->kind==1?summaryAlerts_:reminderAlerts_);
+        xSemaphoreGive(mutex_);
+        if(!allowed)return true; // Consume a muted/expired notice without making an HTTP request.
+    }
     WiFiClientSecure client;client.setCACertBundle(telegramRoots);client.setHandshakeTimeout(8);
     HTTPClient http;http.setConnectTimeout(5000);http.setTimeout(!strcmp(method,"getUpdates")&&(args["timeout"]|0)>0?15000:6000);http.useHTTP10(true);
     http.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
-    if(!http.begin(client,("https://api.telegram.org/bot"+token+"/"+method).c_str()))return false;
+    if(!http.begin(client,("https://api.telegram.org/bot"+token+"/"+method).c_str())){retry_.failure(millis(),-1);return false;}
     http.addHeader("Content-Type","application/json");String payload;serializeJson(args,payload);
-    const int code=http.POST(payload);if(workerGeneration_==generation_)code_=code;retryAfter_=3;
+    const int code=http.POST(payload);if(workerGeneration_==generation_)code_=code;
     JsonDocument filter;filter["ok"]=true;filter["description"]=true;filter["parameters"]["retry_after"]=true;
     if(!strcmp(method,"getUpdates")){
         auto item=filter["result"].add<JsonObject>();item["update_id"]=true;
@@ -106,16 +113,16 @@ bool TelegramService::api(const std::string& token,const char* method,JsonDocume
         if(!deserializeJson(output,stream,DeserializationOption::Filter(filter),DeserializationOption::NestingLimit(16)))
             ok=code==200&&(output["ok"]|false);
     }
-    if(!ok){if(code==429)retryAfter_=std::clamp<unsigned>(output["parameters"]["retry_after"]|30u,3,600);else retryAfter_=code==401||code==409?60:15;}
+    if(!ok)retry_.failure(millis(),code,output["parameters"]["retry_after"]|30u);
     http.end();return ok;
 }
-bool TelegramService::send(const std::string& token,int64_t chat,const std::string& text,JsonVariantConst keyboard){
+bool TelegramService::send(const std::string& token,int64_t chat,const std::string& text,JsonVariantConst keyboard,const AgendaNotice* notice){
     if(xSemaphoreTake(mutex_,pdMS_TO_TICKS(20))!=pdTRUE)return false;
     const bool permitted=enabled_&&token==token_&&(chat==gate_.chat()||gate_.pairing(millis()));
     xSemaphoreGive(mutex_);if(!permitted)return false;
     JsonDocument args,reply;args["chat_id"]=chat;args["text"]=text.substr(0,3500);
     if(!keyboard.isNull())args["reply_markup"]=keyboard;
-    return api(token,"sendMessage",args,reply);
+    return api(token,"sendMessage",args,reply,notice);
 }
 void TelegramService::handle(const pet::telegram::Input& input,const std::string& token){
     if(!input.callbackId.empty()){JsonDocument a,r;a["callback_query_id"]=input.callbackId;api(token,"answerCallbackQuery",a,r);}
@@ -171,9 +178,9 @@ void TelegramService::run(){
         vTaskDelay(pdMS_TO_TICKS(1000));std::string token;uint32_t generation;
         bool enabled=false;int64_t offset=0,chat=0;bool studyAlerts=false,reminders=false,summary=false;
         if(xSemaphoreTake(mutex_,pdMS_TO_TICKS(20))!=pdTRUE)continue;
-        token=token_;generation=generation_;enabled=enabled_;offset=gate_.offset();chat=gate_.chat();
+        token=token_;generation=generation_;enabled=enabled_;offset=gate_.offset(time(nullptr));chat=gate_.chat();
         studyAlerts=studyAlerts_;reminders=reminderAlerts_;summary=summaryAlerts_;xSemaphoreGive(mutex_);
-        if(generation!=knownGeneration){knownGeneration=generation;primed=false;}
+        if(generation!=knownGeneration){knownGeneration=generation;primed=false;retry_.clear();}
         workerGeneration_=generation;
         if(!enabled||token.empty()||WiFi.status()!=WL_CONNECTED||time(nullptr)<1704067200){ready_=false;primed=false;continue;}
         bool success=true;
@@ -183,8 +190,8 @@ void TelegramService::run(){
             if(success){args["offset"]=-1;args["limit"]=1;args["timeout"]=0;success=api(token,"getUpdates",args,drain);}
             if(success&&generation==generation_&&xSemaphoreTake(mutex_,pdMS_TO_TICKS(20))==pdTRUE){
                 if(generation==generation_){username_=me["result"]["username"]|"";
-                    for(auto u:drain["result"].as<JsonArray>())gate_.drain(u["update_id"]|int64_t(-1));
-                    offset=gate_.offset();ready_=true;primed=true;}
+                    for(auto u:drain["result"].as<JsonArray>())gate_.drain(u["update_id"]|int64_t(-1),time(nullptr));
+                    offset=gate_.offset(time(nullptr));ready_=true;primed=true;}
                 xSemaphoreGive(mutex_);
             }
         }else{
@@ -206,18 +213,19 @@ void TelegramService::run(){
                 if(input.kind==pet::telegram::Kind::Paired){agenda_->clearTelegram();send(token,input.chat,"MiniPet vinculado a tu cuenta. Usa /ayuda o /estudio.");}
                 else if(input.kind==pet::telegram::Kind::RejectedPair)send(token,input.chat,"No se pudo vincular. Revisa el PIN y vuelve a abrir Vincular Telegram en la OLED.");
                 else if(input.kind==pet::telegram::Kind::Command&&generation==generation_)handle(input,token);
+                if(retry_.remaining(millis()))break;
             }
-            if(success&&chat&&generation==generation_){
+            if(success&&chat&&generation==generation_&&!retry_.remaining(millis())){
                 AgendaNotice notice;
                 if(agenda_->peekTelegram(notice)){
                     const bool permitted=notice.kind==2?studyAlerts:notice.kind==1?summary:reminders;
                     if(!permitted||quiet_)agenda_->finishTelegram(notice.id,true);
-                    else agenda_->finishTelegram(notice.id,send(token,chat,notice.text));
+                    else agenda_->finishTelegram(notice.id,send(token,chat,notice.text,JsonVariantConst{},&notice));
                 }
             }
         }
-        if(!success){ready_=false;primed=false;}
-        const unsigned delay=success?2:retryAfter_;
-        for(unsigned second=0;second<delay&&generation==generation_;++second)vTaskDelay(pdMS_TO_TICKS(1000));
+        if(generation==generation_)ready_=success&&primed;
+        const uint32_t pause=std::max<uint32_t>(2000,retry_.remaining(millis())),started=millis();
+        while(pet::elapsed(millis(),started)<pause&&generation==generation_)vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

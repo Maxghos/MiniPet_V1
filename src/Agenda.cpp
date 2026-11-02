@@ -92,7 +92,7 @@ bool Book::command(JsonVariantConst req,JsonObject reply,const Moment& now) {
         if(!req["dailySummary"].isNull()){if(!req["dailySummary"].is<bool>())fail("Opcion invalida");else next.dailySummary=req["dailySummary"].as<bool>();}
         if(!req["scenes"].isNull()){if(!req["scenes"].is<bool>())fail("Opcion invalida");else next.scenes=req["scenes"].as<bool>();}
         if(!req["summaryMinute"].isNull()){if(!req["summaryMinute"].is<unsigned>()||req["summaryMinute"].as<unsigned>()>=1440)fail("Hora invalida");else next.summaryMinute=req["summaryMinute"].as<unsigned>();}
-        if(reply["ok"].as<bool>()){options_=next;++revision_;}
+        if(reply["ok"].as<bool>()&&(options_.dailySummary!=next.dailySummary||options_.scenes!=next.scenes||options_.summaryMinute!=next.summaryMinute)){options_=next;++revision_;}
     }else if(op=="task.delete"){
         if(task!=tasks_.end()){tasks_.erase(task);++revision_;}
     }else if(op=="reminder.delete"){
@@ -114,7 +114,7 @@ bool Book::command(JsonVariantConst req,JsonObject reply,const Moment& now) {
         }
     }else if(op=="task.today"){
         if(task==tasks_.end()||task->done)fail("Actividad pendiente no encontrada.");
-        else{task->day=now.day;++revision_;}
+        else if(task->day!=now.day){task->day=now.day;++revision_;}
     }else if(op=="reminder.add"){
         const std::string title=req["title"]|"";
         const bool daily=req["daily"]|false;uint32_t day=req["day"]|uint32_t(0);

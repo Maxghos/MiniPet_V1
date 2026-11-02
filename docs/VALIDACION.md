@@ -1,5 +1,27 @@
 # Validación de esta versión
 
+## V3.2.1: Correcciones y ajustes menores
+
+Comprobaciones locales del **2 de noviembre de 2026**. Se reprodujo el guardado fallido sin reintento antes de corregirlo. No se ha utilizado un token personal ni una conexión real a Telegram.
+
+| Comprobación | Resultado |
+|---|---|
+| Comportamiento C++ con ASan/UBSan | 41 suites, 8.112 comprobaciones correctas |
+| Sensores reales con GPIO/reloj simulados | Cinco suites, 388 comprobaciones correctas; se conserva la tolerancia del gesto |
+| Servicio de agenda real con flash/reloj simulados | Seis suites, 72 comprobaciones: escritura fallida/parcial, reintento sin más cambios, renombrado interrumpido, recuperación, No molestar, migración y separación de media |
+| Menor desgaste de flash | Opciones idénticas y pasar una actividad al día que ya tiene mantienen la revisión; estar inactivo no provoca guardados periódicos |
+| Telegram | Ventana de espera común para toda la API, conservación de órdenes ante fallos transitorios, nueva comprobación de silencio/preferencias/caducidad al enviar; política portable probada e integración revisada/compilada |
+| Ejecución prolongada | Reinicio de IDs de Telegram tras una semana sin actualizaciones y expiraciones de PIN/espera que permanecen cerradas tras el desbordamiento del contador |
+| Android | 30 pruebas, cero fallos/errores/omitidas; Lint sin incidencias |
+| Conexión de la app | Configurar Telegram depende del transporte activo; elegir otra búsqueda no altera ese estado. El token se borra al desconectar y al pasar al fondo; conexiones fallidas se cierran |
+| Firmware | ESP32-S3 N16R8 con TTP223 y con pulsador compilados correctamente; aproximadamente 1,43 MB de flash y 59,3 kB de RAM estática |
+| APK 3.2.1 | `versionCode=6`, firma y alineación verificadas, mismo certificado de las APK anteriores y SHA-256 publicado |
+| Regresiones | 8.760 horas de Santiago, 100 frases, bundle de CA públicas y contratos C++/Kotlin correctos |
+
+La agenda pasa a `/state/agenda.json`, con temporal y copia anterior en la misma carpeta. El registro de 3.2.0 se importa si es válido; los metadatos de media de la raíz no se modifican. Las copias ayudan a recuperar el último registro completo, pero no garantizan conservar cambios posteriores a un corte o ante una avería de flash.
+
+**Pendiente en hardware:** comportamiento físico de LittleFS/NVS al cortar alimentación, radios y reconexiones, handshake/entrega/rate limits con Telegram real y uso prolongado con sensores/pantalla. Las pruebas del servicio usan archivos y reloj simulados; no simulan la electrónica ni el planificador del ESP32. Las pruebas Android son Robolectric/Compose, sin teléfono USB. No se afirma una ejecución real de 49 días ni una conversación real con el bot.
+
 ## V3.2: Funciones adicionales
 
 Comprobaciones locales del **2 de noviembre de 2026**, fecha de Santiago. No se ha configurado un token personal ni se han enviado mensajes a Telegram durante el desarrollo.

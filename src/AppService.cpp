@@ -184,7 +184,7 @@ void AppService::execute(JsonVariantConst req,JsonDocument& reply,const std::str
     if(op=="ping")return;
     if(op=="status"||op=="settings.get"){
         settingsJson(reply["settings"].to<JsonObject>(),settings_);reply["active"]=playback_.active(millis());
-        reply["storage"]=fsReady_;reply["ip"]=WiFi.localIP().toString();reply["firmware"]="3.2.0";reply["additional"]=true;
+        reply["storage"]=fsReady_;reply["ip"]=WiFi.localIP().toString();reply["firmware"]="3.2.1";reply["additional"]=true;
         JsonDocument studyRequest;studyRequest["op"]="study.get";
         study_->execute(studyRequest.as<JsonVariantConst>(),reply.as<JsonObject>());return;
     }
