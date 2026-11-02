@@ -124,4 +124,29 @@ class AppUiTest {
         compose.onNodeWithText("Token de BotFather").assertIsNotEnabled()
         compose.onNodeWithText("Guardar token por BLE").assertIsNotEnabled()
     }
+    @Test fun expansionPanelsRenderNativeHabitsRoutinesAndGames(){
+        val model=ViewModelProvider(compose.activity)[MiniPetModel::class.java]
+        val data=org.json.JSONObject(javaClass.getResourceAsStream("/companion.json")!!.bufferedReader().readText())
+        val agenda=org.json.JSONObject(javaClass.getResourceAsStream("/additional.json")!!.bufferedReader().readText()).getJSONObject("agenda")
+        compose.runOnIdle{model.edit{it.copy(tab=2,connected=true,additionalSupported=true,expansionSupported=true,
+            agenda=agenda.toString(),companion=data.getJSONObject("companion").toString(),habits=data.getJSONArray("habits").toString(),routines=data.getJSONArray("routines").toString())}}
+        for((index,title) in listOf(4 to "Hábitos y metas semanales",5 to "Tus rutinas",6 to "Tu historia con MiniPet",7 to "Un descanso con la mano")){
+            compose.runOnIdle{model.edit{it.copy(dayTab=index)}}
+            compose.onNodeWithText(title).assertExists();capture("expansion-$index")
+        }
+        compose.onNodeWithText("Jugar Puntería").assertIsEnabled()
+        compose.onNodeWithText("Jugar Esquivar").assertIsEnabled()
+        compose.runOnIdle{model.edit{it.copy(tab=4,wifiUpdate=false)}}
+        compose.onNodeWithText("Actualizar por Wi-Fi").assertExists()
+        compose.onNodeWithText("Revisar e instalar firmware").assertIsNotEnabled()
+    }
+    @Test fun routineEditorMakesStudyAndOverviewMutuallyExclusive(){
+        val model=ViewModelProvider(compose.activity)[MiniPetModel::class.java]
+        val agenda=org.json.JSONObject(javaClass.getResourceAsStream("/additional.json")!!.bufferedReader().readText()).getJSONObject("agenda")
+        compose.runOnIdle{model.edit{it.copy(tab=2,dayTab=5,connected=true,additionalSupported=true,expansionSupported=true,agenda=agenda.toString(),routineFocus=true)}}
+        compose.onAllNodes(isToggleable())[0].performClick()
+        assertTrue(model.state.routineOverview);assertFalse(model.state.routineFocus)
+        compose.onAllNodes(isToggleable())[1].performClick()
+        assertTrue(model.state.routineFocus);assertFalse(model.state.routineOverview)
+    }
 }

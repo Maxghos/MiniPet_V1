@@ -206,7 +206,7 @@ static const char* labels[Menu::count] = {
     "Espera inicial", "Dormir tras", "Gesto desde", "Gesto hasta",
     "Mantener gesto", "Presencia hasta", "Tiempo pantalla", "Brillo",
     "No molestar", "Desde hora", "Hasta hora", "Vista clima",
-    "Frases random", "Reaccion al clima", "Avisos del clima", "Destello tormenta", "Modo estudio", "Vincular app", "Vincular Telegram", "Configurar WiFi",
+    "Frases random", "Reaccion al clima", "Avisos del clima", "Destello tormenta", "Modo estudio", "Vincular app", "Vincular Telegram", "Juego: Punteria", "Juego: Esquivar", "Actualizar WiFi", "Configurar WiFi",
     "Restablecer", "Guardar y salir"
 };
 const char* Menu::label() const { return labels[item % count]; }
@@ -282,6 +282,9 @@ Menu::Action Menu::input(Press p) {
         else if (item == appItem) return Action::PairApp;
         else if (item == studyItem) return Action::Study;
         else if (item == telegramItem) return Action::Telegram;
+        else if (item == targetItem) return Action::Target;
+        else if (item == dodgeItem) return Action::Dodge;
+        else if (item == otaItem) return Action::Ota;
         else editing = !editing;
     }
     return Action::None;

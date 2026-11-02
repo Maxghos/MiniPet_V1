@@ -47,7 +47,7 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
 @Composable fun MiniPetApp(model: MiniPetModel) {
     val state=model.state
     val scroll=rememberScrollState()
-    LaunchedEffect(state.tab,state.sendTab,state.study?.active){scroll.scrollTo(0)}
+    LaunchedEffect(state.tab,state.sendTab,state.dayTab,state.routineId,state.study?.active){scroll.scrollTo(0)}
     MaterialTheme(colorScheme=Colors){
         Scaffold(topBar={TopAppBar(title={Column{Text("MiniPet",fontWeight=FontWeight.Bold);Text(if(state.connected)state.connectionName else "Tu compañero, a tu manera",style=MaterialTheme.typography.labelMedium)}})},
             bottomBar={NavigationBar{listOf("Conectar","Estudio","Día","Enviar","Ajustes").forEachIndexed{i,title->
@@ -261,4 +261,5 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
         Button(onClick={model.saveSettings()},enabled=!s.busy,modifier=Modifier.fillMaxWidth()){Text("Aplicar y guardar ajustes")}
         OutlinedButton(onClick={model.refresh()},enabled=!s.busy,modifier=Modifier.fillMaxWidth()){Text("Leer ajustes de MiniPet")}
     }
+    FirmwarePanel(model)
 }

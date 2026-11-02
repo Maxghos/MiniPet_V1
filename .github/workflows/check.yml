@@ -30,9 +30,12 @@ jobs:
       - name: Verify published APK and exclude generated apps and signing keys
         run: |
           test -z "$(git ls-files '*.aab' '*.jks' '*.keystore')"
-          test "$(git ls-files '*.apk')" = "$(printf '%s\n' releases/android/MiniPet-3.0.0-debug.apk releases/android/MiniPet-3.1.0-debug.apk releases/android/MiniPet-3.2.0-debug.apk releases/android/MiniPet-3.2.1-debug.apk)"
+          test "$(git ls-files '*.apk')" = "$(printf '%s\n' releases/android/MiniPet-3.0.0-debug.apk releases/android/MiniPet-3.1.0-debug.apk releases/android/MiniPet-3.2.0-debug.apk releases/android/MiniPet-3.2.1-debug.apk releases/android/MiniPet-3.3.0-debug.apk)"
           cd releases/android
-          sha256sum -c MiniPet-3.0.0-debug.apk.sha256 MiniPet-3.1.0-debug.apk.sha256 MiniPet-3.2.0-debug.apk.sha256 MiniPet-3.2.1-debug.apk.sha256
+          sha256sum -c MiniPet-3.0.0-debug.apk.sha256 MiniPet-3.1.0-debug.apk.sha256 MiniPet-3.2.0-debug.apk.sha256 MiniPet-3.2.1-debug.apk.sha256 MiniPet-3.3.0-debug.apk.sha256
+      - name: Verify published OTA packages
+        working-directory: releases/firmware
+        run: sha256sum -c MiniPet-3.3.0-touch.mpfw.sha256 MiniPet-3.3.0-button.mpfw.sha256
   verify:
     runs-on: ubuntu-latest
     steps:
@@ -48,6 +51,8 @@ jobs:
       - run: pio pkg install -e esp32s3
       - run: bash tools/test_host.sh
       - run: pio run -e esp32s3 -e esp32s3-button
+      - name: Verify published OTA format and image hashes
+        run: python3 tools/package_firmware.py --check releases/firmware/MiniPet-3.3.0-touch.mpfw releases/firmware/MiniPet-3.3.0-button.mpfw
       - run: bash tools/preview.sh
       - run: node tools/test_preview.js
       - uses: actions/upload-artifact@v4

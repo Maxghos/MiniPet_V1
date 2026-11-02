@@ -2,7 +2,7 @@
 
 Aplicación nativa en Kotlin y Jetpack Compose, Android **8.0/API 26 o posterior**. Wi-Fi local y BLE cifrado comparten el protocolo documentado en [PROTOCOLO_APP.md](../docs/PROTOCOLO_APP.md).
 
-**[Descargar APK MiniPet 3.2.1](../releases/android/MiniPet-3.2.1-debug.apk?raw=true)**. La copia verificada está en `releases/android` junto con su SHA-256. Conserva la firma de las APK anteriores publicadas. **Las demás APK/AAB, las claves de firma y los directorios de compilación están excluidos de Git.** Es una compilación de prueba firmada, paquete `cl.maxghos.minipet`, `versionCode=6`; no es una publicación en Google Play.
+**[Descargar APK MiniPet 3.3.0](../releases/android/MiniPet-3.3.0-debug.apk?raw=true)**. La copia verificada está en `releases/android` junto con su SHA-256. Conserva la firma de las APK anteriores publicadas. **Las demás APK/AAB, las claves de firma y los directorios de compilación están excluidos de Git.** Es una compilación de prueba firmada, paquete `cl.maxghos.minipet`, `versionCode=7`; no es una publicación en Google Play.
 
 ## Compilar en Android Studio
 
@@ -24,9 +24,9 @@ En Windows usa `gradlew.bat`. La APK aparece en `app/build/outputs/apk/debug/app
 
 - **Conectar:** buscar por Wi-Fi/mDNS, escribir una IP local o buscar por BLE; vincular con el PIN de la OLED.
 - **Estudio:** Pomodoro con programas, tiempos personalizados, cuenta atrás, pausas y resumen. El ESP32 es la fuente del estado; el teléfono no avanza etapas por su cuenta. [Guía de estudio](../docs/ESTUDIO.md).
-- **Día:** actividades, recordatorios, resumen diario y Telegram. [Guía de configuración](../docs/FUNCIONES_ADICIONALES.md).
+- **Día:** actividades, recordatorios, resumen, Telegram, hábitos, rutinas, compañía y juegos. [Guía de expansión](../docs/EXPANSION_3_3.md).
 - **Enviar:** Texto, Media y Biblioteca. Páginas centradas o desplazamiento, fuente compartida, recorte/zoom/giro/contraste/umbral/inversión/tramado y clips de hasta 30 s/15 fps; archivos del teléfono y los ocho espacios de MiniPet.
-- **Ajustes:** leer/aplicar módulos, humor, brillo, mensajes, No molestar, clima, tiempos y distancias. Se conservan en el ESP32.
+- **Ajustes:** módulos, humor, brillo, mensajes, No molestar, clima, tiempos y distancias, además de actualización Wi-Fi con un paquete `.mpfw` y autorización física. Se conservan en el ESP32.
 
 La biblioteca local guarda únicamente los archivos convertidos que eliges conservar/enviar. Los documentos originales se leen a través del selector de Android. La app no envía contenido a servidores externos, no solicita acceso a todas tus fotos y no usa ubicación real; Android 11 y anteriores requieren el permiso de ubicación para buscar BLE.
 
@@ -41,6 +41,8 @@ Las pruebas de estudio consumen `study_cycle.json`, generado por el temporizador
 `additional.json` verifica el contrato C++ de actividades, recordatorios, resumen y estado público de Telegram. Las pruebas bloquean la transmisión del token por HTTP, ejercitan su configuración explícita en un transporte seguro simulado y comprueban que el campo privado se limpia al pasar la app al fondo. La app nunca guarda el token del bot en preferencias; el ESP32 lo guarda en NVS. El estado del bot se consulta sin devolver secretos. Estos tests no se conectan a Telegram ni usan un token real.
 
 Esto no comprueba la radio física, el selector de cada fabricante, los códecs reales de vídeo/GIF del teléfono ni la comunicación con un ESP32 conectado. Esas pruebas se realizan siguiendo [APP_ANDROID.md](../docs/APP_ANDROID.md).
+
+Las pruebas nuevas consumen `companion.json`, generado por C++, y verifican metas, rutinas, controles de juego y navegación de las cuatro vistas adicionales. El cliente de OTA valida paquetes y envía un archivo por HTTP a un servidor local de prueba; no se ha escrito ni reiniciado un ESP32 físico desde estas pruebas.
 
 ## Entorno de desarrollo en la nube
 

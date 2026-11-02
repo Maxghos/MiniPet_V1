@@ -6,6 +6,7 @@
 #include "AppProtocol.h"
 #include "StudyTimer.h"
 #include "LittleActivities.h"
+#include "MiniGames.h"
 #include <Adafruit_SSD1306.h>
 
 class Screen {
@@ -29,6 +30,8 @@ public:
     void studyMenu(const pet::study::Menu& menu,const pet::study::Snapshot& value);
     void littleActivity(pet::LittleActivity activity,uint32_t now,uint32_t age,uint8_t humor);
     void telegramPairing(const char* pin,unsigned seconds);
+    void game(const pet::games::Game& game,uint32_t now);
+    void ota(const char* pin,unsigned seconds,bool writing,unsigned progress,const char* error);
 private:
     void clear();
     void text(int x, int y, const char* value, unsigned size = 1);

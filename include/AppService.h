@@ -2,6 +2,8 @@
 #include "AppProtocol.h"
 #include "StudyService.h"
 #include "TelegramService.h"
+#include "OtaService.h"
+#include "ActivityService.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
@@ -14,7 +16,7 @@
 // Wi-Fi and BLE share a bounded command protocol; the display loop owns settings.
 class AppService {
 public:
-    bool begin(const pet::Settings& settings,StudyService& study,AgendaService& agenda,TelegramService& telegram);
+    bool begin(const pet::Settings& settings,StudyService& study,AgendaService& agenda,TelegramService& telegram,ActivityService& activities);
     void poll();
     void openPairing();
     void closePairing();
@@ -34,6 +36,7 @@ public:
     void read(pet::app::RemoteView& view);
     std::string dispatch(const std::string& json,const std::string& bearer="",bool secureBle=false);
     void receiveBle(const std::string& fragment);
+    OtaService& ota(){return ota_;}
 private:
     static void bleWorker(void* self);
     void execute(JsonVariantConst request,JsonDocument& response,const std::string& bearer,bool secureBle);
@@ -43,8 +46,10 @@ private:
     unsigned assetCount();
     void cancelUpload();
     AsyncWebServer server_{8080};
+    OtaService ota_;
     StudyService* study_=nullptr;
     AgendaService* agenda_=nullptr;
+    ActivityService* activities_=nullptr;
     TelegramService* telegram_=nullptr;
     SemaphoreHandle_t mutex_=nullptr;
     QueueHandle_t bleQueue_=nullptr;

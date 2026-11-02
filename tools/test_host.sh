@@ -10,8 +10,8 @@ fi
 "${CXX:-g++}" -std=c++17 -Wall -Wextra -Werror -pedantic \
   -fsanitize=address,undefined -fno-omit-frame-pointer -g \
   -Iinclude -I"$json_dir" src/PetCore.cpp src/FaceRenderer.cpp src/TextLayout.cpp \
-  src/WeatherBehavior.cpp src/WeatherEffects.cpp src/AppProtocol.cpp src/StudyTimer.cpp src/StudyCodec.cpp src/Agenda.cpp src/TelegramProtocol.cpp src/LittleActivities.cpp \
-  test/core/test_main.cpp test/core/test_v2.cpp test/core/test_app.cpp test/core/test_study.cpp test/core/test_sensor_behavior.cpp test/core/test_additional.cpp \
+  src/WeatherBehavior.cpp src/WeatherEffects.cpp src/AppProtocol.cpp src/StudyTimer.cpp src/StudyCodec.cpp src/Agenda.cpp src/TelegramProtocol.cpp src/LittleActivities.cpp src/MiniGames.cpp src/OtaPackage.cpp \
+  test/core/test_main.cpp test/core/test_v2.cpp test/core/test_app.cpp test/core/test_study.cpp test/core/test_sensor_behavior.cpp test/core/test_additional.cpp test/core/test_companion.cpp test/core/test_games.cpp test/core/test_ota.cpp \
   -o build/test_core
 ./build/test_core "$@"
 "${CXX:-g++}" -std=c++17 -Wall -Wextra -Werror -pedantic \
@@ -23,6 +23,11 @@ fi
   -Itest/services -Iinclude -I"$json_dir" src/Agenda.cpp src/AgendaService.cpp src/PetCore.cpp \
   test/services/test_agenda_service.cpp -o build/test_agenda_service
 ./build/test_agenda_service
+"${CXX:-g++}" -std=c++17 -Wall -Wextra -Werror -pedantic \
+  -fsanitize=address,undefined -fno-omit-frame-pointer -g \
+  -Itest/services -Iinclude -I"$json_dir" src/Agenda.cpp src/AgendaService.cpp src/PetCore.cpp \
+  test/services/test_companion_service.cpp -o build/test_companion_service
+./build/test_companion_service
 python3 tools/test_timezone.py
 python3 tools/generate_phrases.py --check
 python3 tools/generate_telegram_trust.py --check

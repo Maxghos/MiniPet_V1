@@ -33,6 +33,7 @@ public:
                  bool freshWeather, uint32_t random, bool weatherChange,bool scenes=false);
     void note(Tick now, Tick duration, const Settings& s, uint32_t random, bool autonomous=true);
     static Tick interval(const Settings& s, uint32_t random);
+    bool ready(Tick now) const{return gap_&&elapsed(now,last_)>=duration_+gap_;}
 private:
     Tick last_=0, duration_=0, gap_=0;
     uint8_t burst_=0;

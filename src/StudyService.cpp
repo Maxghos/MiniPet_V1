@@ -1,4 +1,5 @@
 #include "StudyService.h"
+#include "AgendaService.h"
 #include <Arduino.h>
 #include <Preferences.h>
 
@@ -63,4 +64,18 @@ bool StudyService::control(const char* operation,uint32_t expectedRevision,const
     JsonDocument req,reply;req["op"]=operation;req["expectedRevision"]=expectedRevision;
     if(config)pet::study::writeConfig(req["config"].to<JsonObject>(),*config);
     execute(req.as<JsonVariantConst>(),reply.to<JsonObject>());return reply["ok"]|false;
+}
+void StudyService::executeRoutine(AgendaService& agenda,JsonVariantConst request,JsonObject reply){
+    if(!mutex_||xSemaphoreTake(mutex_,pdMS_TO_TICKS(2000))!=pdTRUE){reply["ok"]=false;reply["error"]="Estudio ocupado";return;}
+    timer_.update(millis());accounting_.observe(timer_.snapshot(millis()));
+    if(timer_.snapshot(millis()).active()){reply["ok"]=false;reply["error"]="Termina la sesion actual antes de ejecutar una rutina.";}
+    else{
+        JsonDocument prepare;prepare["op"]="routine.prepare";prepare["id"]=request["id"];
+        agenda.execute(prepare.as<JsonVariantConst>(),reply);
+        if((reply["ok"]|false)&&(reply["plan"]["focus"]|false)){
+            const auto now=millis();timer_.start(now);accounting_.observe(timer_.snapshot(now));active_=true;save(now);
+        }
+    }
+    pet::study::writeSnapshot(reply["study"].to<JsonObject>(),timer_.snapshot(millis()));reply["study"]["persisted"]=persisted_;
+    xSemaphoreGive(mutex_);
 }

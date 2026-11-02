@@ -4,6 +4,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <atomic>
+class AgendaService;
 
 class StudyService {
 public:
@@ -11,6 +12,7 @@ public:
     void poll(pet::study::Snapshot& output);
     bool read(pet::study::Snapshot& output);
     void execute(JsonVariantConst request,JsonObject reply);
+    void executeRoutine(AgendaService& agenda,JsonVariantConst request,JsonObject reply);
     bool control(const char* operation,uint32_t expectedRevision,const pet::study::Config* config=nullptr);
     bool active() const { return active_; }
     bool totals(pet::agenda::Totals& output);

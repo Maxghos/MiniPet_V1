@@ -174,6 +174,9 @@ void testApp(unsigned& suites,unsigned& assertions);
 void testStudy(unsigned& suites,unsigned& assertions);
 void testSensorBehavior(unsigned& suites,unsigned& assertions);
 void testAdditional(unsigned& suites,unsigned& assertions);
+void testCompanion(unsigned& suites,unsigned& assertions);
+void testGames(unsigned& suites,unsigned& assertions);
+void testOta(unsigned& suites,unsigned& assertions);
 int main(int argc,char** argv) {
     gestureLifecycle(); gestureFailuresAndRollover(); sensorFiltering(); touchAndMenu();
     enabledModulesAndQuery(); humorAndPriorities(); settingsAndQuietHours(); faceFramesAndMessages();
@@ -183,5 +186,6 @@ int main(int argc,char** argv) {
     testStudy(suites,assertions);
     testSensorBehavior(suites,assertions);
     testAdditional(suites,assertions);
+    testCompanion(suites,assertions);testGames(suites,assertions);testOta(suites,assertions);
     std::cout << suites << " suites passed, " << assertions << " assertions\n";
 }

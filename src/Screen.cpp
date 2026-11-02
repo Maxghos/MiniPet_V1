@@ -41,6 +41,15 @@ void Screen::remote(const pet::app::RemoteView& content) {
 void Screen::littleActivity(pet::LittleActivity activity,uint32_t now,uint32_t age,uint8_t humor){
     pet::drawLittleActivity(faces_,canvas_,activity,now,age,humor);memcpy(display_.getBuffer(),canvas_.bytes.data(),512);
 }
+void Screen::game(const pet::games::Game& game,uint32_t now){
+    game.draw(canvas_,now);memcpy(display_.getBuffer(),canvas_.bytes.data(),512);
+}
+void Screen::ota(const char* pin,unsigned seconds,bool writing,unsigned progress,const char* error){
+    clear();char value[32];text(0,0,"ACTUALIZAR POR WIFI");
+    if(writing){snprintf(value,sizeof(value),"Cargando: %u%%",progress);text(0,10,value);text(0,22,"Mantener alimentacion");}
+    else if(error&&*error){text(0,8,"Revisa el error");text(0,16,"en la app. Reintenta");text(0,24,"desde este menu.");}
+    else{snprintf(value,sizeof(value),"Codigo %s   %us",pin,seconds);text(0,8,value);text(0,16,"App > Ajustes > OTA");text(0,24,"Boton: cancelar");}
+}
 void Screen::telegramPairing(const char* pin,unsigned seconds){
     clear();char value[28];snprintf(value,sizeof(value),"TELEGRAM PIN %s",pin);text(0,0,value);
     text(0,8,"Envia a tu bot:");snprintf(value,sizeof(value),"/vincular %s",pin);text(0,16,value);

@@ -139,11 +139,11 @@ private:
 
 class Menu {
 public:
-    static constexpr unsigned count = 28;
-    static constexpr unsigned studyItem = 22, appItem = 23, telegramItem=24, wifiItem = 25, resetItem = 26, saveItem = 27;
+    static constexpr unsigned count = 31;
+    static constexpr unsigned studyItem = 22, appItem = 23, telegramItem=24, targetItem=25,dodgeItem=26,otaItem=27,wifiItem = 28, resetItem = 29, saveItem = 30;
     void open(const Settings& settings) { draft = settings; active = true; editing = false; item = 0; }
     // Save, Portal, Closed, or None. Wi-Fi is configured separately from settings.
-    enum class Action { None, Save, Portal, PairApp, Study, Telegram, Closed };
+    enum class Action { None, Save, Portal, PairApp, Study, Telegram, Target, Dodge, Ota, Closed };
     Action input(Press press);
     const char* label() const;
     void value(char* out, unsigned size) const;

@@ -1,8 +1,8 @@
-# MiniPet V3.2.1 · ESP32-S3 + Android + Telegram
+# MiniPet V3.3 · ESP32-S3 + Android + Telegram
 
 Mascota de escritorio con ojos animados en una OLED **SSD1306 I²C de 128×32**, sensores PIR y ultrasónico, reloj de Santiago y clima de Puente Alto.
 
-**Mantenimiento 3.2.1:** agenda separada de la biblioteca, importación de los datos anteriores, copia de recuperación y reintento de guardados fallidos; esperas de Telegram respetadas también al enviar avisos; ajustes de conexión, fechas y mensajes de la app. [Cambios y comprobaciones](docs/VALIDACION.md#v321-correcciones-y-ajustes-menores).
+**[Expansión 3.3](docs/EXPANSION_3_3.md):** hábitos con metas semanales y rachas, rutinas editables, nombre y memoria de la mascota, dos minijuegos con la mano y actualización del firmware por Wi-Fi desde la app. No requiere componentes nuevos. Para habilitar OTA debes cargar esta versión una primera vez por USB; las siguientes cargas compatibles pueden hacerse desde Android.
 
 **[Funciones adicionales](docs/FUNCIONES_ADICIONALES.md):** Telegram conectado a Pomodoro, actividades del día, recordatorios puntuales/diarios, resumen de estudio y cuatro pequeñas actividades espontáneas. Todo se guarda y ejecuta en el ESP32; la app incorpora **Día**. El bot se configura con tu propio token por BLE cifrado y se vincula a tu cuenta mediante un PIN físico. El repositorio y las APK no incluyen datos personales ni un token preconfigurado.
 
@@ -12,7 +12,9 @@ Se conservan los **[ajustes de sensores de 3.1.1](docs/AJUSTES_3_1_1.md)**: gest
 
 La app Android nativa amplía MiniPet por Wi-Fi local o BLE, con mensajes, imágenes/GIF/vídeos adaptados, biblioteca, estudio y ajustes. Conectarse no cambia su comportamiento. **[Instalación y uso de la app](docs/APP_ANDROID.md)** · **[Proyecto Android](android/README.md)** · **[Protocolo](docs/PROTOCOLO_APP.md)**.
 
-**[Descargar APK MiniPet 3.2.1](releases/android/MiniPet-3.2.1-debug.apk?raw=true)** para Android 8.0 o superior. Actualiza primero el firmware. Se instala encima de las APK anteriores publicadas: conserva paquete y firma. Es una compilación de prueba firmada, guardada en `releases/android` junto con su SHA-256. Las claves de firma y los archivos generados por las compilaciones siguen excluidos.
+**[Descargar APK MiniPet 3.3.0](releases/android/MiniPet-3.3.0-debug.apk?raw=true)** para Android 8.0 o superior. Actualiza primero el firmware. Se instala encima de las APK anteriores publicadas: conserva paquete y firma. Es una compilación de prueba firmada, guardada en `releases/android` junto con su SHA-256. Las claves de firma y los archivos generados por las compilaciones siguen excluidos.
+
+Paquetes para actualizaciones posteriores: **[TTP223](releases/firmware/MiniPet-3.3.0-touch.mpfw?raw=true)** · **[Pulsador mecánico](releases/firmware/MiniPet-3.3.0-button.mpfw?raw=true)**. Son archivos `.mpfw` para la app, no imágenes completas para una primera carga USB. Elige la variante del botón que usas y sigue la [guía de OTA](docs/EXPANSION_3_3.md#actualizar-por-wi-fi).
 
 El **TTP223 se reserva para ajustes**. Fuera del modo estudio, una presencia sostenida en la zona del HC-SR05 solicita **clima → reacción de la mascota → hora → pantalla habitual**. El humor regula la iniciativa, las expresiones y los comentarios de la mascota; las consultas siempre se completan. La reacción se omite con el asistente desactivado, No molestar, datos anteriores o pronóstico de próximos días.
 
@@ -26,12 +28,17 @@ El **TTP223 se reserva para ajustes**. Fuera del modo estudio, una presencia sos
 - Módulos independientes: asistente, reloj y clima; cualquier combinación que deje al menos uno habilitado.
 - Clima principal con icono, detalles y máximas/mínimas de tres días. Consulta gratuita de Open-Meteo para uso no comercial, conforme a sus condiciones.
 - Hora por NTP y reglas de Santiago con horario de verano. Tras sincronizar, el reloj sigue funcionando sin Wi-Fi mientras el equipo esté encendido.
-- Menú de **28 opciones**, con «Modo estudio», «Vincular app», «Vincular Telegram», controles independientes para frases random, reacciones y avisos del clima y destello de tormenta (apagado inicialmente). Se conservan los ajustes guardados en V1/V2/V3 y el Wi-Fi. No requiere una clave de API meteorológica.
+- Menú de **31 opciones**, con «Modo estudio», «Vincular app», «Vincular Telegram», «Puntería», «Esquivar» y «Actualizar WiFi», además de los controles de personalidad y clima. Se conservan los ajustes guardados en V1/V2/V3 y el Wi-Fi. No requiere una clave de API meteorológica.
 - App Android 8.0+: previsualización exacta de 128×32, texto centrado/desplazado, recorte/zoom/giro/contraste/tramado y clips de hasta 30 s/15 fps. Bibliotecas separadas en teléfono y ESP32; guardar no cambia la pantalla.
 - Pomodoro 25/5/15 por defecto, descanso largo cada cuatro bloques, programas Clásico/Suave/Profundo y tiempos personalizados. Espera tu confirmación para volver al estudio; inicio automático opcional. Sin bromas ni consultas visuales durante la sesión, con recuperación pausada tras reiniciar.
 - Agenda compartida entre app y bot: 24 actividades, 12 recordatorios y estadísticas de 14 días. Resumen automático a las 20:30, configurable, con horarios de Santiago y No molestar.
 - Telegram personal sin servidor propio: notificaciones con la app cerrada, controles de Pomodoro con confirmación y acceso exclusivo a la cuenta vinculada. Requiere Wi-Fi con internet. El temporizador sigue funcionando localmente si se pierde la red.
 - Cuatro microescenas propias: leer un librito, respirar, estirarse y mirar una estrella; reguladas por humor y desactivables.
+- Hasta ocho hábitos con meta de 1–7 días por semana, marcación diaria y rachas, compartidos entre app y Telegram.
+- Hasta seis rutinas editables que preparan actividades para hoy, empiezan el programa guardado de estudio o solicitan una vista de clima y hora.
+- Nombre y apodo configurables, saludos y pequeñas historias con memoria persistente, además del reconocimiento de avances.
+- Dos juegos voluntarios para la pantalla 128×32: Puntería y Esquivar, controlados al acercar/alejar la mano frente al HC-SR05.
+- Actualización Wi-Fi mediante paquete `.mpfw`, credencial de la app, autorización física y comprobación de modelo, tamaño e integridad.
 
 **[Guía de conexión y primera carga](docs/CONEXIONES.md)** · **[Comportamiento y ajustes](docs/COMPORTAMIENTO.md)** · **[Ver animaciones](docs/caras.html)**
 

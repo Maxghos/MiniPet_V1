@@ -1,4 +1,5 @@
 #include "AppService.h"
+#include "FirmwareVersion.h"
 #include <AsyncJson.h>
 #include <LittleFS.h>
 #include <Preferences.h>
@@ -56,8 +57,8 @@ bool applySettings(JsonVariantConst json,pet::Settings& s) {
     return s.gestureMaxCm>=s.gestureMinCm+10;
 }
 }
-bool AppService::begin(const pet::Settings& settings,StudyService& study,AgendaService& agenda,TelegramService& telegram) {
-    study_=&study;agenda_=&agenda;telegram_=&telegram;
+bool AppService::begin(const pet::Settings& settings,StudyService& study,AgendaService& agenda,TelegramService& telegram,ActivityService& activities) {
+    study_=&study;agenda_=&agenda;telegram_=&telegram;activities_=&activities;
     settings_=settings;mutex_=xSemaphoreCreateMutex();bleQueue_=xQueueCreate(3,sizeof(BleRequest*));
     bleAck_=xSemaphoreCreateBinary();
     if(!mutex_||!bleQueue_||!bleAck_)return false;
@@ -69,6 +70,8 @@ bool AppService::begin(const pet::Settings& settings,StudyService& study,AgendaS
     }
     if(fsReady_)LittleFS.remove("/upload.part");
     if(!agenda.begin(fsReady_))return false;
+    if(!activities.begin(study,agenda))return false;
+    telegram.activities(activities);
     if(!telegram.begin(study,agenda))return false;
     server_.on("/api/v1/info",HTTP_GET,[this](AsyncWebServerRequest* request){
         JsonDocument doc;doc["name"]="MiniPet";doc["protocol"]=1;doc["width"]=128;doc["height"]=32;
@@ -85,7 +88,12 @@ bool AppService::begin(const pet::Settings& settings,StudyService& study,AgendaS
         const auto reply=dispatch(input.c_str(),bearer);
         request->send(200,"application/json; charset=utf-8",reply.c_str());
     });
-    handler->setMaxContentLength(maxJson);server_.addHandler(handler);server_.begin();
+    handler->setMaxContentLength(maxJson);server_.addHandler(handler);
+    if(!ota_.begin(server_,[this](const std::string& supplied){
+        if(xSemaphoreTake(mutex_,pdMS_TO_TICKS(100))!=pdTRUE)return false;
+        const bool allowed=pet::app::sameToken(supplied,token_);xSemaphoreGive(mutex_);return allowed;
+    },study))return false;
+    server_.begin();
     char name[20];snprintf(name,sizeof(name),"MiniPet-%04X",unsigned(ESP.getEfuseMac()&0xffff));
     NimBLEDevice::init(name);NimBLEDevice::setMTU(247);
     NimBLEDevice::setSecurityAuth(true,true,true);NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
@@ -101,6 +109,7 @@ bool AppService::begin(const pet::Settings& settings,StudyService& study,AgendaS
     return xTaskCreatePinnedToCore(bleWorker,"minipet-app",8192,this,1,nullptr,0)==pdPASS;
 }
 void AppService::poll() {
+    ota_.poll();
     if(pairing_&&millis()-pairAt_>=120000)closePairing();
     if(!mdns_&&millis()-lastMdns_>=5000&&(WiFi.status()==WL_CONNECTED||WiFi.getMode()==WIFI_AP_STA)) {
         lastMdns_=millis();char host[24];snprintf(host,sizeof(host),"minipet-%04x",unsigned(ESP.getEfuseMac()&0xffff));
@@ -108,6 +117,7 @@ void AppService::poll() {
     }
 }
 void AppService::openPairing() {
+    if(ota_.busy()||ota_.rebootPending())return;
     if(xSemaphoreTake(mutex_,pdMS_TO_TICKS(20))!=pdTRUE)return;
     snprintf(pin_,sizeof(pin_),"%06lu",static_cast<unsigned long>(esp_random()%1000000));
     pairAt_=millis();pairing_=true;attempts_=0;NimBLEDevice::setSecurityPasskey(strtoul(pin_,nullptr,10));
@@ -145,6 +155,10 @@ std::string AppService::dispatch(const std::string& json,const std::string& bear
 void AppService::execute(JsonVariantConst req,JsonDocument& reply,const std::string& bearer,bool secureBle){
     const std::string op=req["op"]|"";
     auto fail=[&](const char* error){reply["ok"]=false;reply["error"]=error;};
+    if((ota_.busy()||ota_.rebootPending())&&op!="ota.get"&&op!="ping"&&op!="status"&&op!="settings.get"&&
+       op!="study.get"&&op!="agenda.get"&&op!="companion.get"&&op!="routine.list"&&op!="game.get"&&op!="telegram.get"&&op!="library"){
+        fail("Espera a que termine la actualizacion de firmware.");return;
+    }
     if(op=="pair"){
         if(!pairing()||attempts_>=5){fail("Abre Vincular app en MiniPet");return;}
         ++attempts_;
@@ -161,6 +175,18 @@ void AppService::execute(JsonVariantConst req,JsonDocument& reply,const std::str
     if(!pet::app::sameToken(supplied,token_)){fail("Vinculacion requerida");return;}
     lastContact_=millis();contacted_=true;
     playback_.heartbeat(millis());
+    if(op=="ota.get"){ota_.status(reply["ota"].to<JsonObject>());return;}
+    if(op=="routine.run"||op.rfind("game.",0)==0){
+        activities_->execute(req,reply.as<JsonObject>());
+        if((reply["ok"]|false)&&op!="game.get"){interaction_=true;playback_.stop();playingId_.clear();}
+        return;
+    }
+    if(op.rfind("habit.",0)==0||op.rfind("routine.",0)==0||op.rfind("companion.",0)==0){
+        if(op=="routine.prepare"||op=="routine.plan"){fail("Usa routine.run para ejecutar una rutina.");return;}
+        agenda_->execute(req,reply.as<JsonObject>());
+        if((reply["ok"]|false)&&op!="companion.get"&&op!="routine.list")interaction_=true;
+        return;
+    }
     if(op.rfind("telegram.",0)==0){telegram_->execute(req,reply.as<JsonObject>(),secureBle);return;}
     if(op.rfind("agenda.",0)==0||op.rfind("task.",0)==0||op.rfind("reminder.",0)==0){
         agenda_->execute(req,reply.as<JsonObject>());
@@ -181,10 +207,11 @@ void AppService::execute(JsonVariantConst req,JsonDocument& reply,const std::str
     }
     if(localBusy_&&(op=="text"||op=="play"||op=="settings.set")){fail("Cierra los ajustes de la OLED primero");return;}
     if(study_->active()&&(op=="text"||op=="play")){fail("Termina el modo estudio antes de mostrar otro contenido");return;}
+    if(activities_->active()&&(op=="text"||op=="play")){fail("Termina el juego antes de mostrar otro contenido");return;}
     if(op=="ping")return;
     if(op=="status"||op=="settings.get"){
-        settingsJson(reply["settings"].to<JsonObject>(),settings_);reply["active"]=playback_.active(millis());
-        reply["storage"]=fsReady_;reply["ip"]=WiFi.localIP().toString();reply["firmware"]="3.2.1";reply["additional"]=true;
+        settingsJson(reply["settings"].to<JsonObject>(),settings_);reply["active"]=playback_.active(millis());reply["expansion"]=true;
+        reply["storage"]=fsReady_;reply["ip"]=WiFi.localIP().toString();reply["firmware"]=MINIPET_VERSION;reply["additional"]=true;reply["otaSupported"]=true;
         JsonDocument studyRequest;studyRequest["op"]="study.get";
         study_->execute(studyRequest.as<JsonVariantConst>(),reply.as<JsonObject>());return;
     }

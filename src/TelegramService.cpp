@@ -1,4 +1,5 @@
 #include "TelegramService.h"
+#include "ActivityService.h"
 #include "NetworkGuard.h"
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
@@ -17,7 +18,7 @@ public:
     size_t write(uint8_t) override {return 0;}
 private:Stream& stream_;uint32_t started_;unsigned left_=65536;
 };
-const char* help="MiniPet\n/estudio - estado y botones\n/pomodoro - empezar programa guardado\n/pausa /continuar\n/saltar /terminar - piden confirmacion\n/actividad titulo\n/actividades\n/hecho ID /pendiente ID /hoy ID\n/recordar HH:MM titulo\n/diario HH:MM titulo\n/avisos /borraraviso ID\n/resumen\nHorarios: Santiago. Configura tiempos y avisos desde la app.";
+const char* help="MiniPet\n/estudio - estado y botones\n/pomodoro - empezar programa guardado\n/pausa /continuar\n/saltar /terminar - piden confirmacion\n/actividad titulo\n/actividades\n/hecho ID /pendiente ID /hoy ID\n/recordar HH:MM titulo\n/diario HH:MM titulo\n/avisos /borraraviso ID\n/resumen\n/habitos /habito 4 Leer\n/cumpli ID /desmarcarhabito ID\n/rutinas /rutina ID\n/estudiar /dia - rutinas 1 y 2\n/compania\n/jugar punteria /jugar esquivar\n/salirjuego\nHorarios: Santiago. Configura tiempos y avisos desde la app.";
 }
 bool TelegramService::save(const std::string& token,int64_t chat,int64_t user,bool enabled,bool studyAlerts,bool reminderAlerts,bool summaryAlerts){
     JsonDocument doc;doc["token"]=token;doc["chat"]=chat;doc["user"]=user;doc["enabled"]=enabled;
@@ -130,6 +131,31 @@ void TelegramService::handle(const pet::telegram::Input& input,const std::string
     if(!pet::telegram::command(input.text,input.callback,req.to<JsonObject>(),error)){send(token,input.chat,error);return;}
     std::string op=req["op"]|"";
     if(op=="help"){send(token,input.chat,help);return;}
+    if(op.rfind("habit.",0)==0||op.rfind("companion.",0)==0||op.rfind("routine.",0)==0||op.rfind("game.",0)==0){
+        const bool read=op=="companion.get"||op=="routine.list"||op=="game.get";
+        if(!read&&localBusy_&&op!="game.stop"){send(token,input.chat,"Cierra los ajustes de la OLED antes de aplicar cambios.");return;}
+        if(op=="routine.run"||op.rfind("game.",0)==0){
+            if(!activities_){send(token,input.chat,"Actividades no disponibles.");return;}
+            activities_->execute(req.as<JsonVariantConst>(),reply.to<JsonObject>());
+        }else agenda_->execute(req.as<JsonVariantConst>(),reply.to<JsonObject>());
+        if(!(reply["ok"]|false)){send(token,input.chat,reply["error"]|"No se pudo aplicar.");return;}
+        if(!read)interaction_=true;
+        std::string result;
+        if(op=="routine.list"){
+            result="Rutinas (usa /rutina ID):\n";
+            for(auto r:reply["routines"].as<JsonArray>())result+=std::to_string(r["id"]|0u)+" "+std::string(r["title"]|"")+"\n";
+        }else if(op=="companion.get"&&std::string(req["view"]|"")=="habits"){
+            result="Habitos: ID, dias esta semana/meta\n";
+            for(auto h:reply["habits"].as<JsonArray>())result+=std::to_string(h["id"]|0u)+" "+std::string(h["title"]|"")+" "+std::to_string(h["weekDone"]|0u)+"/"+std::to_string(h["targetPerWeek"]|1u)+((h["doneToday"]|false)?" [hoy hecho]\n":"\n");
+        }else if(op=="companion.get"){
+            auto c=reply["companion"];result=std::string(c["name"]|"MiniPet")+"\nDias juntos: "+std::to_string(c["daysTogether"]|0u)+"\nBloques recordados: "+std::to_string(c["totalBlocks"]|0u)+"\nActividades: "+std::to_string(c["totalTasks"]|0u);
+        }else if(op=="routine.run")result="Rutina preparada: "+std::string(reply["plan"]["title"]|"");
+        else if(op=="game.start")result="Juego iniciado. Coloca la mano entre 15 y 80 cm. Para salir: /salirjuego o boton de ajustes.";
+        else if(op=="game.stop")result="Juego cerrado.";
+        else result="Habito actualizado. Consulta /habitos.";
+        if(reply["agenda"]["persisted"].is<bool>()&&!(reply["agenda"]["persisted"]|true))result+="\nPendiente de guardar en memoria persistente.";
+        send(token,input.chat,result);return;
+    }
     if(op=="confirm"){
         JsonDocument read,current;read["op"]="study.get";study_->execute(read.as<JsonVariantConst>(),current.to<JsonObject>());
         auto s=current["study"];

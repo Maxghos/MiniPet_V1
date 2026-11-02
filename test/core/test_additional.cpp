@@ -95,6 +95,11 @@ void commandAllowlistAndButtons(){
     CHECK(telegram::command("/recordar 14:30 Repasar algebra",false,req.to<JsonObject>(),error));CHECK(req["minute"].as<unsigned>()==870);
     CHECK(std::string(req["op"].as<const char*>())=="reminder.add");
     CHECK(!telegram::command("/telegram.configure secreto",false,req.to<JsonObject>(),error));
+    CHECK(telegram::command("/habito 4 Leer",false,req.to<JsonObject>(),error));CHECK(req["targetPerWeek"].as<unsigned>()==4);
+    CHECK(!telegram::command("/habito 8 Leer",false,req.to<JsonObject>(),error));
+    CHECK(telegram::command("/rutina 3",false,req.to<JsonObject>(),error));CHECK(req["id"].as<unsigned>()==3);
+    CHECK(telegram::command("/jugar punteria",false,req.to<JsonObject>(),error));CHECK(std::string(req["kind"].as<const char*>())=="target");
+    CHECK(!telegram::command("/jugar cualquiercosa",false,req.to<JsonObject>(),error));
     CHECK(!telegram::command("p:stop:4294967296",true,req.to<JsonObject>(),error));
     CHECK(telegram::command("p:pause:42",true,req.to<JsonObject>(),error));CHECK(req["expectedRevision"].as<unsigned>()==42);
     CHECK(telegram::command("q:stop:42",true,req.to<JsonObject>(),error));CHECK(std::string(req["op"].as<const char*>())=="confirm");

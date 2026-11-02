@@ -2,10 +2,12 @@
 
 MiniPet organiza bloques de concentración y descansos. El temporizador vive en el **ESP32**: sigue funcionando sin la app, sin Bluetooth y sin internet mientras la placa esté encendida. No necesita componentes nuevos.
 
+En 3.3 también puedes iniciar tu programa guardado desde una rutina. Una rutina con estudio puede preparar sus actividades para hoy y empezar el temporizador; no sustituye una sesión activa. Consulta [EXPANSION_3_3.md](EXPANSION_3_3.md).
+
 ## Empezar desde la app
 
-1. Actualiza el firmware con PlatformIO: **Build → Upload**, igual que antes. El saludo indica **MiniPet V3.2.1**. Se conservan Wi-Fi y ajustes previos.
-2. Instala la [APK 3.2.1](../releases/android/MiniPet-3.2.1-debug.apk?raw=true) encima de la anterior. Conserva el mismo paquete y la misma firma de las APK anteriores publicadas; no hace falta desinstalar ni volver a vincular si la vinculación sigue vigente.
+1. Actualiza el firmware con PlatformIO: **Build → Upload**, igual que antes. El saludo indica **MiniPet V3.3**. Se conservan Wi-Fi y ajustes previos.
+2. Instala la [APK 3.3.0](../releases/android/MiniPet-3.3.0-debug.apk?raw=true) encima de la anterior. Conserva el mismo paquete y la misma firma de las APK anteriores publicadas; no hace falta desinstalar ni volver a vincular si la vinculación sigue vigente.
 3. Conecta MiniPet por Wi-Fi o BLE y abre **Estudio**.
 4. Elige un programa, ajusta los tiempos y pulsa **Guardar y empezar a estudiar**. También puedes guardar el programa sin iniciarlo.
 

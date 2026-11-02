@@ -59,7 +59,18 @@ int main(int argc,char** argv){
     pet::telegram::publicState(additional["telegram"].to<JsonObject>(),tg);
     std::string additionalJson;serializeJsonPretty(additional,additionalJson);
     additionalJson.erase(std::remove(additionalJson.begin(),additionalJson.end(),'\r'),additionalJson.end());additionalJson+='\n';
+    pet::agenda::Book companion;JsonDocument info;
+    req.clear();req["op"]="habit.add";req["title"]="Lectura";req["targetPerWeek"]=3;
+    companion.command(req.as<JsonVariantConst>(),info.to<JsonObject>(),moment);
+    const uint32_t habitId=info["id"]|1u;
+    req.clear();req["op"]="habit.done";req["id"]=habitId;req["done"]=true;
+    companion.command(req.as<JsonVariantConst>(),info.to<JsonObject>(),moment);
+    req.clear();req["op"]="routine.save";req["title"]="Mi estudio";req["focus"]=true;req["overview"]=false;
+    req["tasks"].to<JsonArray>().add("Repasar algebra");companion.command(req.as<JsonVariantConst>(),info.to<JsonObject>(),moment);
+    req.clear();req["op"]="companion.get";companion.command(req.as<JsonVariantConst>(),info.to<JsonObject>(),moment);
+    std::string companionJson;serializeJsonPretty(info,companionJson);
+    companionJson.erase(std::remove(companionJson.begin(),companionJson.end(),'\r'),companionJson.end());companionJson+='\n';
     if(!save("text_layout.json",json,check)||!save("frame_clip.mpet",std::string(reinterpret_cast<char*>(media.data()),media.size()),check)||
-        !save("study_cycle.json",studyJson,check)||!save("additional.json",additionalJson,check))return 1;
+        !save("study_cycle.json",studyJson,check)||!save("additional.json",additionalJson,check)||!save("companion.json",companionJson,check))return 1;
     std::cout<<"App protocol fixtures "<<(check?"verified":"generated")<<"\n";
 }

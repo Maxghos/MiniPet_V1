@@ -12,6 +12,8 @@
 #include "WeatherBehavior.h"
 #include "AppService.h"
 #include "NetworkGuard.h"
+#include "ActivityService.h"
+#include "FirmwareVersion.h"
 #include <WiFi.h>
 
 namespace {
@@ -32,6 +34,7 @@ AppService app;
 AgendaService agenda;
 TelegramService telegram;
 StudyService study;
+ActivityService activities;
 pet::study::Menu studyMenu;
 pet::study::Snapshot studyState;
 pet::app::RemoteView remoteContent;
@@ -40,6 +43,8 @@ bool sceneActive=false;
 pet::LittleActivity scene=pet::LittleActivity::Reading;
 uint32_t sceneAt=0;
 std::string agendaDisplay;
+std::string companionDisplay;
+bool wasGaming=false;
 bool wasRemoteActive=false;
 bool wasStudying=false;
 uint32_t studyErrorAt=0;
@@ -116,21 +121,24 @@ void setup() {
     Serial.begin(115200);
     loadSettings(); sensors.begin();
     screenReady=screen.begin();
-    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet V3.2.1","Hola, Puente Alto!"); screen.show(); }
+    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet V" MINIPET_VERSION,"Hola, Puente Alto!"); screen.show(); }
     else Serial.println("OLED no disponible: revisar alimentacion, SDA 8, SCL 9 y direccion 0x3C");
     const uint32_t now=millis();
     personality.begin(now); gesture.reset(now); ambient.begin(now);
     NetworkGuard::begin();networkReady=network.begin();
     if(!study.begin())Serial.println("No se pudo iniciar modo estudio");
-    appReady=app.begin(settings,study,agenda,telegram);
+    appReady=app.begin(settings,study,agenda,telegram,activities);
     if (!networkReady) Serial.println("No se pudo iniciar servicio de red");
-    Serial.println("MiniPet V3.2.1 iniciado. Boton: ajustes. App por WiFi :8080 o BLE.");
+    Serial.println("MiniPet V" MINIPET_VERSION " iniciado. Boton: ajustes. App por WiFi :8080 o BLE.");
 }
 void loop() {
     uint32_t now=millis();
     const bool quiet=quietNow();
     const pet::Press press=button.update(sensors.touch(),now);
     study.poll(studyState);
+    const bool updating=appReady&&(app.ota().busy()||app.ota().rebootPending());
+    if(updating){activities.stop();query.cancel();message=nullptr;sceneActive=false;ambientReaction=false;}
+    if(activities.takeInteraction()){query.cancel();message=nullptr;sceneActive=false;ambientReaction=false;gesture.reset(now);personality.interact(now,settings);if(appReady)app.stop();}
     telegram.quiet(quiet);
     if(telegram.takePaired()){menu.active=false;studyMenu.active=false;gesture.reset(now);}
     if(telegram.takeInteraction()){query.cancel();message=nullptr;sceneActive=false;gesture.reset(now);personality.interact(now,settings);}
@@ -163,6 +171,10 @@ void loop() {
         }
         app.read(remoteContent);
     }
+    if(activities.takeOverview()&&!studyState.active()){
+        queryWeather=weather;queryWeatherPage=0;auto options=settings;options.modules=pet::Weather|pet::Clock;
+        query.start(now,options,false,false);ambient.note(now,query.totalDuration(),settings,esp_random(),false);
+    }
     const bool remoteActive=remoteContent.type!=pet::app::Content::None;
     if(wasRemoteActive&&!remoteActive){ambient.note(now,0,settings,esp_random(),false);gesture.reset(now);}
     wasRemoteActive=remoteActive;
@@ -170,10 +182,12 @@ void loop() {
         network.poll();
         if (pet::elapsed(now,lastWeatherPoll)>=250) { weather=network.weather(); lastWeatherPoll=now; }
     }
-    if (press!=pet::Press::None) {
+    if (press!=pet::Press::None&&!updating) {
+        if(activities.active())activities.stop();
         sceneActive=false;
         if(appReady){app.stop();remoteContent.type=pet::app::Content::None;}
-        if(telegram.pairing())telegram.closePairing();
+        if(appReady&&app.ota().windowOpen())app.ota().cancelWindow();
+        else if(telegram.pairing())telegram.closePairing();
         else if(appReady && app.pairing())app.closePairing();
         else if (network.configuring()) network.stopPortal();
         else if (studyMenu.active) {
@@ -215,21 +229,34 @@ void loop() {
             else if(action==pet::Menu::Action::Telegram){
                 if(!telegram.openPairing()){studyError=true;telegramError=true;studyErrorAt=now;}
             }
+            else if(action==pet::Menu::Action::Target||action==pet::Menu::Action::Dodge){
+                if(activities.startLocal(action==pet::Menu::Action::Target?pet::games::Kind::Target:pet::games::Kind::Dodge))menu.active=false;
+                else{studyError=true;telegramError=false;studyErrorAt=now;}
+            }
+            else if(action==pet::Menu::Action::Ota&&appReady){
+                if(!app.ota().openWindow()){studyError=true;telegramError=false;studyErrorAt=now;}
+            }
         }
         personality.interact(now,settings);
         gesture.reset(now); ambient.note(now,0,settings,esp_random(),false);
     }
-    const bool busy=menu.active||studyMenu.active||network.configuring()||(appReady&&app.pairing())||telegram.pairing();
+    const bool otaWindow=appReady&&(app.ota().windowOpen()||app.ota().busy()||app.ota().rebootPending());
+    const bool busy=menu.active||studyMenu.active||network.configuring()||(appReady&&app.pairing())||telegram.pairing()||otaWindow;
+    activities.localBusy(busy||remoteActive);if(appReady)app.ota().block(activities.active()||remoteActive);
     telegram.localBusy(busy);if(appReady)app.localBusy(busy);
     now=millis(); // NVS, menus and network work may have taken time since loop entry.
     if (sensors.poll(now)) {
+        activities.poll(now,sensors.valid,sensors.rawCm);
         presence.update(now,sensors.valid,sensors.cm,settings.presenceCm);
-        const bool allowApproach=!menu.active&&!network.configuring()&&!query.active()&&!remoteActive&&!studying;
+        const bool allowApproach=!busy&&!activities.active()&&!query.active()&&!remoteActive&&!studying;
         if(approach.update(now,sensors.valid,sensors.cm,allowApproach))
             personality.react(pet::Mood::Shocked,now,1500);
-        if (menu.active || network.configuring() || query.active() || remoteActive || studying) gesture.reset(now);
+        if (busy || activities.active() || query.active() || remoteActive || studying) gesture.reset(now);
         else if (gesture.update(now,sensors.valid,sensors.cm,sensors.rawCm,settings)) startQuery(now,quiet);
     }
+    const bool gaming=activities.active();
+    if(wasGaming&&!gaming){gesture.reset(now);ambient.note(now,0,settings,esp_random(),false);}
+    wasGaming=gaming;
     personality.update(now,presence.present(),sensors.motion(now) && !menu.active && !query.active() && !remoteActive && !studying,settings);
     query.update(now);
     if (message && pet::elapsed(now,messageAt)>=messageDuration) message=nullptr;
@@ -237,16 +264,17 @@ void loop() {
     if(studyError&&pet::elapsed(now,studyErrorAt)>=2500)studyError=false;
     if(sceneActive&&(pet::elapsed(now,sceneAt)>=2200||quiet))sceneActive=false;
     if(sceneActive&&gesture.holding())sceneActive=false;
-    if(!busy&&!studying&&!remoteActive&&!query.active()&&!message&&!ambientReaction&&!sceneActive&&!quiet&&!gesture.holding()&&agenda.takeDisplay(agendaDisplay))
+    if(!busy&&!gaming&&!studying&&!remoteActive&&!query.active()&&!message&&!ambientReaction&&!sceneActive&&!quiet&&!gesture.holding()&&agenda.takeDisplay(agendaDisplay))
         showMessage(agendaDisplay.c_str(),now,pet::Mood::Curious);
     const auto mood=personality.mood(now);
     const bool awake=mood!=pet::Mood::Sleeping;
     const bool notices=awake && !quiet && !studying && settings.messages && settings.weatherNotices &&
         (settings.modules&(pet::Assistant|pet::Weather))==(pet::Assistant|pet::Weather);
     weatherChanges.observe(weather,now,notices);
-    const bool allow=awake && !quiet && !menu.active && !network.configuring() && !query.active() &&
+    bool allow=awake && !quiet && !busy && !gaming && !query.active() &&
         !message && !ambientReaction && !sceneActive && !remoteActive && !studying && !gesture.holding() &&
         mood!=pet::Mood::Shocked && mood!=pet::Mood::Attentive && homeView(now)==pet::View::Pet;
+    if(agenda.companionNotice(companionDisplay,settings.humor,allow&&settings.messages&&ambient.ready(now))){showMessage(companionDisplay.c_str(),now,pet::Mood::Happy);allow=false;}
     const auto event=ambient.poll(now,settings,allow,personality.attentionDue(now,presence.present(),settings),
         weatherFresh(weather,now),esp_random(),weatherChanges.pending(now),agenda.scenes());
     switch (event) {
@@ -271,7 +299,8 @@ void loop() {
     }
     if (screenReady && pet::elapsed(now,lastFrame)>=board::frameMs) {
         lastFrame=now;
-        if(telegram.pairing())screen.telegramPairing(telegram.pin(),telegram.pairingSeconds());
+        if(otaWindow){if(app.ota().rebootPending())screen.status("Actualizacion lista","Reiniciando...");else screen.ota(app.ota().pin(),app.ota().windowSeconds(),app.ota().busy(),app.ota().progress(),"");}
+        else if(telegram.pairing())screen.telegramPairing(telegram.pin(),telegram.pairingSeconds());
         else if(appReady&&app.pairing()){
             const String ip=network.connected()?WiFi.localIP().toString():WiFi.softAPIP().toString();
             screen.pairing(app.pin(),ip.c_str(),network.portalActive()?network.apName():"",network.apPassword(),app.pairingSeconds());
@@ -281,6 +310,7 @@ void loop() {
         else if(studyMenu.active)screen.studyMenu(studyMenu,studyState);
         else if (menu.active) screen.menu(menu,sensors.valid,sensors.cm);
         else if(studyState.active()||(studyState.event==pet::study::Event::Stopped&&studyState.eventAgeMs<6500))screen.study(studyState,now,quiet?0:settings.humor);
+        else if(gaming)activities.render(screen,now);
         else if(remoteContent.type!=pet::app::Content::None)screen.remote(remoteContent);
         else if(sceneActive)screen.littleActivity(scene,now,pet::elapsed(now,sceneAt),settings.humor);
         else if (query.joke()) screen.message(jokeMessage ? jokeMessage : "Ya voy...",query.stageAge(now));

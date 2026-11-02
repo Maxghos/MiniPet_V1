@@ -2,11 +2,13 @@
 
 Esta versión añade Telegram personal, actividades del día, recordatorios, resumen diario y cuatro pequeñas actividades animadas. Conserva Pomodoro, las caras, la app de contenido y los ajustes de sensores de 3.1.1. No requiere componentes nuevos ni un servidor propio.
 
+En la versión actual se añaden hábitos, rutinas, memoria, juegos y OTA. Esta guía sigue describiendo agenda y bot; las nuevas herramientas están en [EXPANSION_3_3.md](EXPANSION_3_3.md).
+
 ## Instalar
 
 1. Descarga el proyecto actualizado y abre su raíz en VS Code/PlatformIO.
-2. Ejecuta **Build → Upload** en `esp32s3`, o `esp32s3-button` si usas pulsador mecánico. El saludo muestra **MiniPet V3.2.1**.
-3. Instala la [APK 3.2.1](../releases/android/MiniPet-3.2.1-debug.apk?raw=true) encima de la anterior. Mantiene paquete y certificado de firma; no hace falta desinstalar. El cableado, Wi-Fi y ajustes existentes se conservan.
+2. Ejecuta **Build → Upload** en `esp32s3`, o `esp32s3-button` si usas pulsador mecánico. El saludo muestra **MiniPet V3.3**.
+3. Instala la [APK 3.3.0](../releases/android/MiniPet-3.3.0-debug.apk?raw=true) encima de la anterior. Mantiene paquete y certificado de firma; no hace falta desinstalar. El cableado, Wi-Fi y ajustes existentes se conservan.
 4. En la app, conecta MiniPet y abre **Día**. Allí están **Actividades, Avisos, Resumen y Telegram**. Texto, imágenes y biblioteca ahora están juntos en **Enviar**.
 
 ## Actividades del día
@@ -72,6 +74,14 @@ Puedes desactivar Telegram, elegir avisos de Pomodoro/recordatorios/resumen o **
 | `/diario 09:00 Preparar el día` | Crea un aviso diario |
 | `/avisos` / `/borraraviso 2` | Lista o elimina recordatorios |
 | `/resumen` | Consulta el resumen de hoy |
+| `/habitos` | Hábitos, ID, progreso semanal y racha |
+| `/habito 4 Leer` | Crea el hábito Leer con meta de cuatro días por semana |
+| `/cumpli 3` / `/desmarcarhabito 3` | Marca o corrige el hábito 3 para hoy |
+| `/rutinas` / `/rutina 2` | Lista rutinas o ejecuta la rutina 2 |
+| `/estudiar` / `/dia` | Ejecuta los accesos a las rutinas iniciales 1 y 2, si siguen existiendo |
+| `/compania` | Consulta nombre y memoria pública de la mascota |
+| `/jugar punteria` / `/jugar esquivar` | Inicia voluntariamente uno de los juegos |
+| `/salirjuego` | Termina la partida |
 
 Los botones de Pomodoro llevan la revisión de estado: si la etapa cambió mientras decidías, se rechaza la acción antigua y puedes pedir `/estudio` otra vez. No se duplican temporizadores entre Telegram y la app. Los menús físicos mantienen prioridad: desde Telegram se puede pausar o terminar, pero hay que cerrarlos para empezar, continuar o saltar.
 

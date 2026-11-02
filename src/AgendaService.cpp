@@ -20,21 +20,23 @@ bool AgendaService::begin(bool storage,MomentClock clock){
         else if(load("/agenda.json")){pendingSave_=true;recovered_=currentExists;} // Import only a validated 3.2.0 agenda.
         else{loadError_=existing;persisted_=!existing;}
     }
-    scenes_=book_.options().scenes;lastSave_=millis();lastAttempt_=millis();return true;
+    scenes_=book_.options().scenes;lastSave_=millis();lastAttempt_=millis();began_=millis();return true;
 }
 bool AgendaService::load(const char* path){
     File file=LittleFS.open(path,"r");if(!file)return false;
     JsonDocument doc;
-    const bool valid=file.size()<=16384&&!deserializeJson(doc,file)&&book_.load(doc.as<JsonVariantConst>());
+    const bool valid=file.size()<=32768&&!deserializeJson(doc,file)&&book_.load(doc.as<JsonVariantConst>());
     file.close();return valid;
 }
 bool AgendaService::save(){
     lastAttempt_=millis();persisted_=false;
     if(!storage_)return false;
     if(!LittleFS.exists("/state")&&!LittleFS.mkdir("/state"))return false;
-    JsonDocument doc;book_.store(doc.to<JsonObject>());File file=LittleFS.open("/state/agenda.tmp","w");
+    JsonDocument doc;book_.store(doc.to<JsonObject>());const auto expected=measureJson(doc);
+    if(expected>32768)return false;
+    File file=LittleFS.open("/state/agenda.tmp","w");
     if(!file)return false;
-    const auto expected=measureJson(doc);const auto bytes=serializeJson(doc,file);file.flush();const auto size=file.size();file.close();
+    const auto bytes=serializeJson(doc,file);file.flush();const auto size=file.size();file.close();
     if(bytes!=expected||size!=expected)return false;
     // Keep the last valid generation if power is lost between the two renames.
     if(primaryValid_&&!LittleFS.rename("/state/agenda.json","/state/agenda.bak"))return false;
@@ -67,7 +69,7 @@ void AgendaService::poll(const pet::study::Snapshot& study,const pet::agenda::To
     }
     seenStudy_=true;studyEvent_=study.eventId;
     if(before!=book_.revision())pendingSave_=true;
-    if((pendingSave_||(dirtyStats_&&now-lastSave_>=60000))&&(persisted_||now-lastAttempt_>=5000))save();
+    if(!loadError_&&(pendingSave_||(dirtyStats_&&now-lastSave_>=60000))&&(persisted_||now-lastAttempt_>=5000))save();
     xSemaphoreGive(mutex_);
 }
 void AgendaService::execute(JsonVariantConst req,JsonObject reply){
@@ -97,3 +99,15 @@ void AgendaService::finishTelegram(uint32_t id,bool delivered){
     xSemaphoreGive(mutex_);
 }
 void AgendaService::clearTelegram(){if(mutex_&&xSemaphoreTake(mutex_,pdMS_TO_TICKS(20))==pdTRUE){telegram_.clear();xSemaphoreGive(mutex_);}}
+bool AgendaService::companionNotice(std::string& output,uint8_t humor,bool allow){
+    const uint32_t now=millis(),gap=humor>=70?180000u:humor>=40?360000u:900000u;
+    if(!allow||!humor||uint32_t(now-began_)<45000||uint32_t(now-lastCompanionCheck_)<5000||
+        (companionSpoke_&&uint32_t(now-lastCompanion_)<gap)||!mutex_||xSemaphoreTake(mutex_,pdMS_TO_TICKS(2))!=pdTRUE)return false;
+    if(loadError_){xSemaphoreGive(mutex_);return false;}
+    lastCompanionCheck_=now;
+    const auto before=book_.revision();
+    const bool result=book_.companionNotice(output,clock_(),humor);
+    if(book_.revision()!=before)pendingSave_=true;
+    if(result){lastCompanion_=now;companionSpoke_=true;}
+    xSemaphoreGive(mutex_);return result;
+}

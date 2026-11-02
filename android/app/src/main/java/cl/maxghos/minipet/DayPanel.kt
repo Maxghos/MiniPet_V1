@@ -39,9 +39,12 @@ import org.json.JSONObject
         text={Text("Se elimina de MiniPet y de la lista compartida con Telegram.")},
         confirmButton={TextButton(onClick={deletion?.let{model.dayCommand(it.first,JSONObject().put("id",it.second))};deletion=null},enabled=enabled){Text("Eliminar")}},
         dismissButton={TextButton(onClick={deletion=null}){Text("Cancelar")}})
-    Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)){
-        listOf("Actividades","Avisos","Resumen","Telegram").forEachIndexed{i,title->
-            FilterChip(selected=s.dayTab==i,onClick={model.edit{it.copy(dayTab=i)}},label={Text(title)})
+    val sections=listOf(listOf("Actividades","Avisos","Resumen","Telegram"))+if(s.expansionSupported)listOf(listOf("Hábitos","Rutinas","Compañía","Juegos")) else emptyList()
+    sections.forEachIndexed{row,labels->
+        Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)){
+            labels.forEachIndexed{column,title->val i=row*4+column
+                FilterChip(selected=s.dayTab==i,onClick={model.edit{it.copy(dayTab=i)}},label={Text(title)})
+            }
         }
     }
     Text(if(ready)"Hora de Santiago · ${dayLabel(today)}" else "Esperando hora de Santiago. Conecta MiniPet a internet para sincronizar.",style=MaterialTheme.typography.labelMedium)
@@ -118,7 +121,11 @@ import org.json.JSONObject
             Button(onClick={model.saveDayOptions()},enabled=enabled&&parseClockMinute(s.summaryTime)!=null,modifier=Modifier.fillMaxWidth()){Text("Guardar opciones del día")}
         }
     }
-    else->TelegramPanel(model)
+    3->TelegramPanel(model)
+    4->HabitsPanel(model)
+    5->RoutinesPanel(model)
+    6->CompanionProfilePanel(model)
+    7->GamesPanel(model)
     }
 }
 @Composable private fun TelegramPanel(model: MiniPetModel){

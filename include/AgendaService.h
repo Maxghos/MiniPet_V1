@@ -22,6 +22,7 @@ public:
     bool peekTelegram(AgendaNotice& output);
     void finishTelegram(uint32_t id,bool delivered);
     void clearTelegram();
+    bool companionNotice(std::string& output,uint8_t humor,bool allow);
     bool scenes() const { return scenes_; }
 private:
     bool load(const char* path);
@@ -37,4 +38,6 @@ private:
     bool pendingSave_=false,primaryValid_=false,recovered_=false,loadError_=false;
     std::atomic<bool> scenes_{true};
     MomentClock clock_=agendaMoment;
+    uint32_t began_=0,lastCompanion_=0,lastCompanionCheck_=0;
+    bool companionSpoke_=false;
 };

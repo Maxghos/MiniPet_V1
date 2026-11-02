@@ -5,6 +5,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import java.io.Closeable
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
@@ -38,6 +39,8 @@ object LocalAddress {
 class HttpTransport(address: String, private val open: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection }): CommandTransport {
     private val base = LocalAddress.normalize(address)
     override val chunkSize = 3072
+    internal suspend fun updateFirmware(token: String,info: FirmwarePackage,code: String,source:()->InputStream,progress:(Float)->Unit): JSONObject =
+        transferFirmware(URL("$base/api/v1/firmware"),open,token,info,code,source,progress)
     override suspend fun exchange(command: JSONObject): JSONObject = withContext(Dispatchers.IO) {
         val connection = open(URL("$base/api/v1/command"))
         try {
@@ -74,6 +77,10 @@ class DeviceClient(val transport: CommandTransport, var token: String = ""): Clo
         token = response.getString("token")
         require(token.matches(Regex("[0-9a-f]{64}")))
         return token
+    }
+    suspend fun updateFirmware(info: FirmwarePackage,code: String,open:()->InputStream,progress:(Float)->Unit): JSONObject=mutex.withLock {
+        val wifi=transport as? HttpTransport ?: throw DeviceFailure("La actualización requiere una conexión Wi-Fi activa")
+        wifi.updateFirmware(token,info,code,open,progress)
     }
     suspend fun upload(id: String, title: String, bytes: ByteArray, progress: (Float) -> Unit) {
         MediaFormat.parse(bytes)

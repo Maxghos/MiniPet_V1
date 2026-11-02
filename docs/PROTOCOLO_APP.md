@@ -43,8 +43,18 @@ Las demás órdenes requieren `Authorization: Bearer CREDENCIAL` en HTTP o el ca
 | `telegram.configure` | `tokenValue`; exclusivamente desde la ruta BLE cifrada y con la credencial de app |
 | `telegram.settings` | `enabled`, `studyAlerts`, `reminderAlerts`, `summaryAlerts`; booleanos |
 | `telegram.clear` | Borra token/vinculación de NVS y descarta la cola del bot |
+| `companion.get` | Preferencias y memoria pública de compañía, más hábitos y progreso |
+| `companion.options` | `name`, `nickname`, `greetings`, `celebrations`, `stories`; preferencias persistentes |
+| `habit.add` | `title`, `targetPerWeek` (1–7); hasta ocho hábitos |
+| `habit.done`, `habit.delete` | `id` numérico; `done` booleano absoluto para registrar/corregir hoy o eliminar |
+| `routine.list` | Lista de rutinas persistentes |
+| `routine.save` | `id` opcional para editar, `title`, `focus`, `overview`, `tasks` con hasta seis títulos; seis rutinas como máximo |
+| `routine.delete`, `routine.run` | Elimina o ejecuta una rutina por su `id` numérico |
+| `game.get` | Partida, estado, puntuación y tiempo restantes |
+| `game.start`, `game.stop` | Inicia `kind: "target"` o `"dodge"`, o sale de la partida; inicio solo sin estudio/pantallas incompatibles |
+| `ota.get` | Estado del actualizador, destino, versión, límite y progreso; nunca PIN ni token |
 
-`id` acepta únicamente 1–24 caracteres ASCII alfanuméricos, `_` y `-`. No se aceptan rutas. La app usa bloques binarios de 3.072 bytes en Wi-Fi y 120 en BLE. Hay una sola carga pendiente y se exige actividad al menos cada dos minutos. Las imágenes/vídeos no se muestran hasta ejecutar `play`.
+Para archivos de media, `id` acepta únicamente 1–24 caracteres ASCII alfanuméricos, `_` y `-`. No se aceptan rutas. Los ID de actividades, hábitos y rutinas son números. La app usa bloques binarios de 3.072 bytes en Wi-Fi y 120 en BLE. Hay una sola carga de media pendiente y se exige actividad al menos cada dos minutos. Las imágenes/vídeos no se muestran hasta ejecutar `play`.
 
 ## Temporizador de estudio (firmware 3.1)
 
@@ -76,6 +86,37 @@ La ventana de Vincular Telegram se abre físicamente, dura dos minutos y permite
 Las peticiones del bot tienen destino fijo `api.telegram.org`, validación TLS, redirecciones desactivadas, límites de respuesta/profundidad JSON y esperas acotadas. Las conexiones TLS del bot y clima comparten un mutex en sus tareas de red; nunca se espera una petición HTTPS en el bucle de dibujo. La fuente/verificación de CA se documenta en [certs/README.md](../certs/README.md).
 
 La cola automática del bot tiene hasta 16 avisos y tres intentos por aviso. Vencimientos: estudio 2 min, recordatorios 15 min, resumen 1 h. Los avisos OLED tienen cola de ocho entradas y respetan las pantallas prioritarias; No molestar suprime la creación y envío automáticos. Configurar otro token, borrar la vinculación o cambiar activación descarta la cola del bot. No se garantiza entrega exactamente una vez ante fallos de red/alimentación.
+
+## Expansión 3.3
+
+`status` incluye `expansion: true` y `otaSupported: true`. La app habilita hábitos, rutinas, compañía y juegos por capacidad, sin inferirlas de que exista una agenda 3.2. Se mantienen las órdenes y los campos anteriores.
+
+Los hábitos, las rutinas y la memoria amplían el registro de agenda con campos opcionales. Se acepta un registro anterior sin esos campos. El calendario se basa en Santiago; registrar hábitos y preparar actividades de una rutina requiere fecha válida. Las órdenes de completado son absolutas e idempotentes: `done: true` repetido no vuelve a sumar. Una rutina reutiliza actividades con igual título/fecha y comprueba el cupo antes de preparar el conjunto.
+
+Los juegos son locales y voluntarios. `game.start` elige `target` o `dodge`; no depende de una sesión de comunicación de 15 s ni del PIR. El bucle de sensores suministra lecturas frescas al motor. `game.stop` y el botón físico permiten salir. La guía de mecánicas, prioridades y calendario está en [EXPANSION_3_3.md](EXPANSION_3_3.md).
+
+## Actualización OTA 3.3
+
+La ruta `POST /api/v1/firmware` recibe un paquete binario **MPFW** completo, sin JSON ni Base64. Solo se ofrece por HTTP local; BLE sigue disponible para el resto de órdenes. Requiere `Authorization: Bearer CREDENCIAL`, `X-MiniPet-Code: CODIGO_OLED`, `Content-Type: application/octet-stream` y `Content-Length` fijo. La ventana de autorización se abre físicamente durante dos minutos; el código no se devuelve en las consultas de estado.
+
+`ota.get` devuelve `ota` con `target`, `firmware`, `maxImageBytes`, `window`, `seconds`, `busy`, `received`, `expected`, `progress`, `error`, `phase` y `rebootPending`. Los estados públicos son `idle`, `ready`, `receiving`, `error` y `rebooting`. Una carga aceptada responde `{"ok":true,"reboot":true}` y programa el reinicio; hay que volver a conectar la app después.
+
+Cabecera MPFW de 128 bytes, enteros little-endian, seguida de la imagen de aplicación:
+
+| Offset | Bytes | Contenido |
+|---|---|---|
+| 0 | 4 | ASCII `MPFW` |
+| 4 | 2 | Versión de formato, 1 |
+| 6 | 2 | Longitud de cabecera, 128 |
+| 8 | 4 | Longitud de `firmware.bin` |
+| 12 | 32 | Destino ASCII terminado en NUL: `minipet-s3-n16r8-touch` o `minipet-s3-n16r8-button` |
+| 44 | 32 | Versión ASCII terminada en NUL |
+| 76 | 32 | SHA-256 binario de la imagen |
+| 108 | 20 | Reservado, cero |
+
+El paquete debe caber en la partición inactiva y coincidir con la variante compilada. Se valida su hash y la imagen ESP32-S3 antes de cambiar el arranque. La autorización se consume/cierra para evitar reutilizarla inadvertidamente. Un archivo rechazado o incompleto no activa la partición nueva. No se modifica la tabla de particiones, el bootloader ni los datos; la primera instalación del actualizador se hace por USB. No hay firma de editor ni rollback funcional automático tras arrancar una imagen válida pero defectuosa.
+
+`tools/package_firmware.py` genera y comprueba el paquete; el procedimiento para usuarios está en [Actualizar por Wi-Fi](EXPANSION_3_3.md#actualizar-por-wi-fi).
 
 ## Archivo MPET
 

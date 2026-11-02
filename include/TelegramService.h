@@ -4,10 +4,12 @@
 #include "StudyService.h"
 #include <Preferences.h>
 #include <atomic>
+class ActivityService;
 
 class TelegramService {
 public:
     bool begin(StudyService& study,AgendaService& agenda);
+    void activities(ActivityService& value){activities_=&value;}
     void execute(JsonVariantConst request,JsonObject reply,bool secureBle);
     bool openPairing();
     void closePairing();
@@ -28,6 +30,7 @@ private:
     void status(JsonObject out);
     SemaphoreHandle_t mutex_=nullptr;
     StudyService* study_=nullptr;AgendaService* agenda_=nullptr;
+    ActivityService* activities_=nullptr;
     std::string token_,username_;
     pet::telegram::Gate gate_;
     bool enabled_=true,studyAlerts_=true,reminderAlerts_=true,summaryAlerts_=true;

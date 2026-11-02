@@ -1,14 +1,16 @@
-# MiniPet 3.2: app Android, agenda, Telegram y estudio
+# MiniPet 3.3: app Android, hábitos, rutinas, juegos y actualización Wi-Fi
 
 ## 1. Actualizar MiniPet
 
-Descarga el proyecto completo actualizado, abre su raíz en VS Code/PlatformIO y ejecuta **esp32s3 → General → Build**, después **Upload**. Para un pulsador mecánico usa `esp32s3-button`. El saludo dice **MiniPet V3.2.1**; el menú incluye **Vincular app**, **Modo estudio** y **Vincular Telegram**. Conserva los ajustes de sensores de 3.1.1.
+Descarga el proyecto completo actualizado, abre su raíz en VS Code/PlatformIO y ejecuta **esp32s3 → General → Build**, después **Upload**. Para un pulsador mecánico usa `esp32s3-button`. El saludo dice **MiniPet V3.3**; el menú incluye **Vincular app**, **Modo estudio** y **Vincular Telegram**. Conserva los ajustes de sensores de 3.1.1.
 
 El cableado es el mismo. La configuración y el Wi-Fi de V1/V2 se conservan. No necesitas borrar la flash. En el primer arranque se inicializa la partición de archivos que las versiones anteriores de MiniPet no utilizaban; allí se guarda la nueva biblioteca, separada de los ajustes NVS.
 
+La primera instalación de 3.3 se hace por USB para habilitar el actualizador. Después puedes cargar paquetes compatibles desde **Ajustes** de la app por Wi-Fi, con autorización física en la OLED. No se actualiza firmware por BLE. La guía de hábitos, rutinas, compañía, juegos y OTA está en [EXPANSION_3_3.md](EXPANSION_3_3.md).
+
 ## 2. Instalar la APK
 
-**[Descarga la APK MiniPet 3.2.1](../releases/android/MiniPet-3.2.1-debug.apk?raw=true)** y ábrela en tu teléfono Android 8.0 o superior. Autoriza la instalación desde tu navegador/gestor de archivos si Android lo solicita. No necesitas Android Studio ni Expo. Puedes instalarla sobre las APK anteriores publicadas: mantiene paquete y firma. Esta APK es una compilación de prueba firmada, disponible en el repositorio; no se publica en una tienda. Su SHA-256 está en la misma carpeta `releases/android`.
+**[Descarga la APK MiniPet 3.3.0](../releases/android/MiniPet-3.3.0-debug.apk?raw=true)** y ábrela en tu teléfono Android 8.0 o superior. Autoriza la instalación desde tu navegador/gestor de archivos si Android lo solicita. No necesitas Android Studio ni Expo. Puedes instalarla sobre las APK anteriores publicadas: mantiene paquete y firma. Esta APK es una compilación de prueba firmada, disponible en el repositorio; no se publica en una tienda. Su SHA-256 está en la misma carpeta `releases/android`.
 
 ## 3. Vincular por Wi-Fi (recomendado)
 
@@ -38,7 +40,7 @@ Wi-Fi es más rápido para clips. BLE permite las mismas órdenes y transferenci
 ## 5. Mostrar o guardar
 
 - **Estudio:** concentración y descansos, programas personalizados, pausa/reanudación y resumen; sigue sin conexión. [Guía completa de Pomodoro](ESTUDIO.md).
-- **Día:** actividades, recordatorios, resumen diario y configuración de Telegram. [Guía de funciones adicionales y BotFather](FUNCIONES_ADICIONALES.md).
+- **Día:** actividades, recordatorios, resumen diario, Telegram, hábitos, rutinas, compañía y juegos. [Agenda y BotFather](FUNCIONES_ADICIONALES.md) · [Funciones 3.3](EXPANSION_3_3.md).
 - **Enviar → Texto:** escribe el mensaje; elige páginas centradas o desplazamiento y revisa la vista previa. «Mostrar mensaje» lo presenta completo; puedes fijarlo mientras la app siga comunicándose.
 - **Enviar → Imagen / GIF / vídeo:** elige el archivo. Ajusta encuadre, zoom, giro, contraste y tramado. Pulsa **Preparar vista previa** después de cambiar valores; solo se envía el resultado preparado.
 - **Mostrar ahora:** transfiere y reproduce el contenido.
@@ -63,6 +65,10 @@ Con firmware 3.1 se consulta el estudio cada dos segundos y esa consulta tambié
 | Biblioteca del teléfono | 100 archivos convertidos |
 | Texto | Hasta 4.096 bytes UTF-8; español y fuente clásica; otros símbolos pueden aparecer como `?` |
 | Audio | No se transmite/reproduce |
+| Hábitos | Ocho; meta de 1–7 días por semana; marcación por fecha de Santiago |
+| Rutinas | Seis; hasta seis actividades por rutina y acción de estudio o panorama |
+| Juegos | Dos motores locales; control por distancia del HC-SR05, sin control lateral ni reconocimiento de gestos de dedos |
+| Firmware OTA | Paquete `.mpfw` compatible con el botón, Wi-Fi real, autorización física y firmware 3.3 ya instalado |
 | Red | Misma LAN, Wi-Fi propia del ESP32 o BLE; sin control remoto por internet |
 | Formatos originales | Los que decodifica Android; GIF de hasta 8 MiB y dimensiones acotadas, vídeo según los códecs del teléfono |
 

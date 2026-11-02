@@ -2,16 +2,20 @@
 
 ## Prioridades
 
-1. Configuración Wi-Fi o menú: sin gestos ni mensajes autónomos.
-2. Modo estudio activo, pausado o esperando: etapa, ojos y cuenta atrás; sin gestos ni iniciativas que lo interrumpan.
-3. Contenido solicitado desde la app: texto/media; sensores y red continúan, iniciativas visuales pausadas.
-4. Consulta solicitada: posible comentario breve, clima, reacción de ~2 s, reloj y retorno.
-5. Intervención autónoma: mensaje paginado o reacción ambiental y retorno a los ojos.
-6. Pantalla habitual y animación.
+1. Actualización Wi-Fi autorizada/en curso: código, progreso y reinicio; sin juegos ni intervenciones.
+2. Configuración Wi-Fi o menú: sin gestos ni mensajes autónomos.
+3. Modo estudio activo, pausado o esperando: etapa, ojos y cuenta atrás; sin gestos ni iniciativas que lo interrumpan.
+4. Juego iniciado voluntariamente: el ultrasónico controla la partida; sin consulta por mantener la mano ni iniciativas autónomas.
+5. Contenido solicitado desde la app: texto/media; sensores y red continúan, iniciativas visuales pausadas.
+6. Consulta solicitada: posible comentario breve, clima, reacción de ~2 s, reloj y retorno.
+7. Intervención autónoma: mensaje paginado o reacción ambiental y retorno a los ojos.
+8. Pantalla habitual y animación.
 
 El modo estudio se inicia explícitamente desde la app o **Ajustes → Modo estudio**. Pausar no lo cierra. No depende de la conexión ni de NTP; los avisos son visuales y no utilizan destellos. Para recuperar las funciones habituales, termina la sesión. Véase [ESTUDIO.md](ESTUDIO.md).
 
 Los recordatorios de agenda se muestran cuando MiniPet queda libre; funcionan también con el módulo asistente deshabilitado, y respetan No molestar. No interrumpen estudio ni un gesto en curso. Las cuatro pequeñas actividades espontáneas comparten el presupuesto de intervenciones, necesitan el asistente despierto y se pueden desactivar desde Día → Resumen. Los detalles, límites y Telegram están en [FUNCIONES_ADICIONALES.md](FUNCIONES_ADICIONALES.md).
+
+Los hábitos, las rutinas y la memoria se describen en [EXPANSION_3_3.md](EXPANSION_3_3.md). Los saludos, celebraciones e historias esperan a que el asistente esté despierto, con Mensajes activados, fuera de No molestar y dentro del descanso compartido entre iniciativas; además tienen su propia separación y opciones. Con humor 0 no se muestran esas intervenciones de compañía. Las rutinas y los juegos son solicitudes explícitas: no empiezan espontáneamente por el PIR ni sustituyen una sesión de estudio activa.
 
 La conexión de la app, los mensajes de sesión y guardar archivos no cuentan como atención ni cambian la pantalla. Mostrar contenido/aplicar ajustes sí es una interacción. Al terminar, detener o perder la sesión durante ~15 s, MiniPet recupera su pantalla habitual y respeta una pausa antes de nuevas iniciativas. El menú físico interrumpe el contenido externo. La reproducción fijada que expiró no reaparece al reconectar. Ver [APP_ANDROID.md](APP_ANDROID.md).
 

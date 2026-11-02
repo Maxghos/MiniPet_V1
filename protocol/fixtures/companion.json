@@ -1,0 +1,71 @@
+{
+  "ok": true,
+  "companion": {
+    "name": "MiniPet",
+    "nickname": "",
+    "greetings": true,
+    "celebrations": true,
+    "stories": true,
+    "clockReady": true,
+    "day": 20261102,
+    "firstDay": 0,
+    "daysTogether": 0,
+    "totalBlocks": 0,
+    "totalTasks": 0,
+    "totalHabitChecks": 1,
+    "lastStoryDay": 0,
+    "storyChapter": 0
+  },
+  "habits": [
+    {
+      "id": 1,
+      "title": "Lectura",
+      "targetPerWeek": 3,
+      "doneToday": true,
+      "weekDone": 1,
+      "goalReached": false,
+      "streak": 1,
+      "totalDone": 1
+    }
+  ],
+  "routines": [
+    {
+      "id": 1,
+      "title": "Estudiar",
+      "focus": true,
+      "overview": false,
+      "tasks": []
+    },
+    {
+      "id": 2,
+      "title": "Comenzar el dia",
+      "focus": false,
+      "overview": true,
+      "tasks": []
+    },
+    {
+      "id": 3,
+      "title": "Mi estudio",
+      "focus": true,
+      "overview": false,
+      "tasks": [
+        "Repasar algebra"
+      ]
+    }
+  ],
+  "agenda": {
+    "clockReady": true,
+    "day": 20261102,
+    "minute": 600,
+    "revision": 3,
+    "options": {
+      "dailySummary": true,
+      "summaryMinute": 1230,
+      "scenes": true
+    },
+    "tasks": [],
+    "reminders": [],
+    "days": [],
+    "summary": "Resumen 02/11\nEstudio: 0 min\nDescanso: 0 min\nBloques: 0\nActividades completadas: 0\nPendientes: 0"
+  }
+}

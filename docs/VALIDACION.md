@@ -1,5 +1,34 @@
 # Validación de esta versión
 
+## V3.3: Hábitos, rutinas, compañía, juegos y OTA
+
+Comprobaciones locales del **2 de noviembre de 2026**, fecha de Santiago. El desarrollo no ha utilizado un token personal ni ha enviado mensajes al bot. No hay un ESP32 ni un teléfono USB conectados al entorno.
+
+| Comprobación | Resultado |
+|---|---|
+| Lógica C++ con AddressSanitizer/UndefinedBehaviorSanitizer | 58 suites, 9.812 comprobaciones correctas |
+| Controlador real de sensores con GPIO/reloj simulados | Cinco suites, 388 comprobaciones correctas |
+| Servicio real de agenda con flash/reloj simulados | Seis suites anteriores, 72 comprobaciones; dos nuevas suites de compañía, 25 comprobaciones |
+| Total nativo de comportamiento/servicios | 71 suites y 10.297 comprobaciones correctas |
+| Hábitos | Semanas lunes-domingo, marcar/corregir sin duplicar, metas, cambio de fecha/año, historial y rachas compactadas más allá de 56 registros |
+| Rutinas | Definiciones y límites, estudio/panorama excluyentes, preparación del conjunto sin cambios parciales por cupo, actividades reutilizadas y persistencia |
+| Memoria | Lectura de registros anteriores, nombres/opciones, fechas activas, contadores, historias y celebraciones con límites de frecuencia |
+| Datos máximos | Registro permitido con títulos escapables, 24 actividades, 12 avisos, 14 días, ocho hábitos de 56 fechas y seis rutinas de seis títulos dentro de 32 KiB |
+| Juegos | Dos motores portables, dibujo 128×32, puntuación/vidas, pausas con eco inválido, pérdida de sensor, saltos de tiempo y final de partida |
+| Formato OTA | Cabecera, destino, versión, longitudes, prefijo ESP32-S3, marcadores y hash; casos malformados en pruebas nativas y 18 casos del empaquetador Python |
+| Android | 41 pruebas JUnit/Robolectric/Compose, cero fallos, errores u omitidas; Lint sin incidencias |
+| Contrato Android/C++ | Fixture de compañía generado por C++, además de media, texto, estudio y agenda; RPC de hábitos/rutinas/juegos y rechazo de OTA por transporte incorrecto |
+| Firmware N16R8 | Compilaciones TTP223 y pulsador correctas; aproximadamente 1,48 MB de flash y 60,1 kB de RAM estática |
+| APK 3.3.0 | `versionCode=7`, firma y alineación verificadas, mismo paquete y certificado de las versiones anteriores; APK y SHA-256 publicados |
+| Paquetes publicados | `.mpfw` separados para TTP223 y pulsador, con SHA-256 e identificación de la imagen; la CI verifica formato y huellas |
+| Regresiones | 8.760 comparaciones de Santiago, 100 frases, bundle de CA públicas y fixtures anteriores correctos |
+
+La rutina coordina la preparación de actividades y el inicio del temporizador mediante los servicios existentes; no inicia un segundo estudio ni utiliza una cola de acciones arbitrarias. La memoria se incorpora como campos opcionales en el registro de agenda. Las pruebas con flash simulada ejecutan `AgendaService.cpp` real, pero no simulan fallos eléctricos ni desgaste del chip.
+
+El actualizador se ha revisado y compilado con la API OTA de ESP32. El empaquetador comprueba imágenes reales producidas por las compilaciones y rechaza paquetes alterados. Las pruebas portables de formato **no son una carga real por HTTP ni una prueba de arranque**. El SHA-256 y los marcadores verifican integridad/coherencia; no constituyen una firma de editor ni prueban la calidad funcional del firmware recibido.
+
+**Pendiente en tus dispositivos:** primera instalación USB de 3.3, transferencia OTA real y reinicio entre particiones, rechazo de PIN/variante/hash, cancelación/desconexión, persistencia física de NVS/LittleFS, coexistencia de radios/sensores y comodidad de los juegos con tu HC-SR05. También falta comprobar la entrega y control real de Telegram con tu bot. No se promete rollback automático de una imagen que arranque y falle funcionalmente. El procedimiento está en [EXPANSION_3_3.md](EXPANSION_3_3.md).
+
 ## V3.2.1: Correcciones y ajustes menores
 
 Comprobaciones locales del **2 de noviembre de 2026**. Se reprodujo el guardado fallido sin reintento antes de corregirlo. No se ha utilizado un token personal ni una conexión real a Telegram.

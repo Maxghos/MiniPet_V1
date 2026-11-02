@@ -83,6 +83,23 @@ bool command(const std::string& text,bool callback,JsonObject req,std::string& e
     if(verb=="/pomodoro"&&arg.empty()){req["op"]="study.start";return true;}
     if(verb=="/pausa"){req["op"]="study.pause";return true;}
     if(verb=="/continuar"){req["op"]="study.resume";return true;}
+    if(verb=="/habitos"||verb=="/compania"){req["op"]="companion.get";req["view"]=verb=="/habitos"?"habits":"companion";return true;}
+    if(verb=="/rutinas"){req["op"]="routine.list";return true;}
+    if(verb=="/estudiar"||verb=="/dia"){req["op"]="routine.run";req["id"]=verb=="/estudiar"?1:2;return true;}
+    if(verb=="/rutina"||verb=="/cumpli"||verb=="/desmarcarhabito"){
+        uint32_t id;if(!number(arg,id)||!id)return fail();req["id"]=id;
+        req["op"]=verb=="/rutina"?"routine.run":"habit.done";req["done"]=verb=="/cumpli";return true;
+    }
+    if(verb=="/habito"){
+        const auto split=arg.find(' ');uint32_t target;
+        if(split==std::string::npos||!number(arg.substr(0,split),target)||target<1||target>7){error="Usa /habito 4 Leer: meta de 1 a 7 dias por semana.";return false;}
+        req["op"]="habit.add";req["title"]=arg.substr(split+1);req["targetPerWeek"]=target;return true;
+    }
+    if(verb=="/jugar"){
+        if(arg!="punteria"&&arg!="esquivar"){error="Usa /jugar punteria o /jugar esquivar.";return false;}
+        req["op"]="game.start";req["kind"]=arg=="punteria"?"target":"dodge";return true;
+    }
+    if(verb=="/salirjuego"){req["op"]="game.stop";return true;}
     if(verb=="/terminar"||verb=="/saltar"){req["op"]="confirm";req["action"]=verb=="/terminar"?"stop":"skip";return true;}
     if(verb=="/actividades"||verb=="/hoy"||verb=="/avisos"||verb=="/resumen"){
         if(verb=="/hoy"&&!arg.empty()){uint32_t id;if(!number(arg,id))return fail();req["op"]="task.today";req["id"]=id;return true;}

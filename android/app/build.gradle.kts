@@ -10,8 +10,8 @@ android {
         applicationId = "cl.maxghos.minipet"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "3.2.1"
+        versionCode = 7
+        versionName = "3.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs.getByName("debug") {
