@@ -4,6 +4,7 @@
 #include "TextLayout.h"
 #include "WeatherEffects.h"
 #include "AppProtocol.h"
+#include "StudyTimer.h"
 #include <Adafruit_SSD1306.h>
 
 class Screen {
@@ -23,6 +24,8 @@ public:
     void show();
     void pairing(const char* pin,const char* ip,const char* name,const char* password,unsigned seconds);
     void remote(const pet::app::RemoteView& content);
+    void study(const pet::study::Snapshot& value,uint32_t now,uint8_t humor);
+    void studyMenu(const pet::study::Menu& menu,const pet::study::Snapshot& value);
 private:
     void clear();
     void text(int x, int y, const char* value, unsigned size = 1);

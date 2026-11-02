@@ -1,14 +1,14 @@
-# Funciones + apk: instalación y uso
+# MiniPet 3.1: app Android, estudio e instalación
 
 ## 1. Actualizar MiniPet
 
-Descarga el proyecto completo actualizado, abre su raíz en VS Code/PlatformIO y ejecuta **esp32s3 → General → Build**, después **Upload**. Para un pulsador mecánico usa `esp32s3-button`. El saludo dice **MiniPet V3** y aparece una opción nueva: **Vincular app**.
+Descarga el proyecto completo actualizado, abre su raíz en VS Code/PlatformIO y ejecuta **esp32s3 → General → Build**, después **Upload**. Para un pulsador mecánico usa `esp32s3-button`. El saludo dice **MiniPet V3.1**; el menú incluye **Vincular app** y **Modo estudio**.
 
 El cableado es el mismo. La configuración y el Wi-Fi de V1/V2 se conservan. No necesitas borrar la flash. En el primer arranque se inicializa la partición de archivos que las versiones anteriores de MiniPet no utilizaban; allí se guarda la nueva biblioteca, separada de los ajustes NVS.
 
 ## 2. Instalar la APK
 
-**[Descarga la APK MiniPet 3.0.0](../releases/android/MiniPet-3.0.0-debug.apk?raw=true)** y ábrela en tu teléfono Android 8.0 o superior. Autoriza la instalación desde tu navegador/gestor de archivos si Android lo solicita. No necesitas Android Studio ni Expo. Esta APK es una compilación de prueba firmada, disponible en el repositorio; no se publica en una tienda. Su SHA-256 está en la misma carpeta `releases/android`.
+**[Descarga la APK MiniPet 3.1.0](../releases/android/MiniPet-3.1.0-debug.apk?raw=true)** y ábrela en tu teléfono Android 8.0 o superior. Autoriza la instalación desde tu navegador/gestor de archivos si Android lo solicita. No necesitas Android Studio ni Expo. Puedes instalarla sobre la APK 3.0.0 publicada: mantiene paquete y firma. Esta APK es una compilación de prueba firmada, disponible en el repositorio; no se publica en una tienda. Su SHA-256 está en la misma carpeta `releases/android`.
 
 ## 3. Vincular por Wi-Fi (recomendado)
 
@@ -37,8 +37,9 @@ Wi-Fi es más rápido para clips. BLE permite las mismas órdenes y transferenci
 
 ## 5. Mostrar o guardar
 
-- **Texto:** escribe el mensaje; elige páginas centradas o desplazamiento y revisa la vista previa. «Mostrar mensaje» lo presenta completo; puedes fijarlo mientras la app siga comunicándose.
-- **Media:** elige imagen, GIF o vídeo. Ajusta encuadre, zoom, giro, contraste y tramado. Pulsa **Preparar vista previa** después de cambiar valores; solo se envía el resultado preparado.
+- **Estudio:** concentración y descansos, programas personalizados, pausa/reanudación y resumen; sigue sin conexión. [Guía completa de Pomodoro](ESTUDIO.md).
+- **Enviar → Texto:** escribe el mensaje; elige páginas centradas o desplazamiento y revisa la vista previa. «Mostrar mensaje» lo presenta completo; puedes fijarlo mientras la app siga comunicándose.
+- **Enviar → Imagen / GIF / vídeo:** elige el archivo. Ajusta encuadre, zoom, giro, contraste y tramado. Pulsa **Preparar vista previa** después de cambiar valores; solo se envía el resultado preparado.
 - **Mostrar ahora:** transfiere y reproduce el contenido.
 - **Guardar en MiniPet sin mostrar:** transfiere a la biblioteca sin interrumpir la mascota. El teléfono conserva una copia convertida para reenviarla.
 - **Biblioteca:** permite volver a mostrar o eliminar archivos de cada dispositivo por separado.
@@ -46,7 +47,9 @@ Wi-Fi es más rápido para clips. BLE permite las mismas órdenes y transferenci
 
 Mientras hay contenido externo se mantienen las lecturas de sensores, pero se pausan sus consultas visuales y las iniciativas para no taparlo. El menú físico tiene prioridad: ciérralo antes de mostrar contenido o aplicar ajustes desde la app. Guardar archivos y conectarse no generan atención artificial.
 
-La app envía señales de sesión cada cinco segundos mientras está en primer plano. Si deja de comunicarse, el contenido externo termina en unos **15 s** y MiniPet recupera su funcionamiento autónomo. Un contenido fijado que expiró no reaparece al reconectar: hay que pedir «Mostrar» otra vez.
+Con firmware anterior a 3.1, la app envía señales de sesión cada cinco segundos mientras está en primer plano. Si deja de comunicarse, el contenido externo termina en unos **15 s** y MiniPet recupera su funcionamiento autónomo. Un contenido fijado que expiró no reaparece al reconectar: hay que pedir «Mostrar» otra vez.
+
+Con firmware 3.1 se consulta el estudio cada dos segundos y esa consulta también mantiene la comunicación. El vencimiento del contenido externo no se aplica a Pomodoro: continúa al cerrar la app. Durante estudio puedes preparar/guardar archivos; termina la sesión antes de mostrar texto/media. El botón de volver a la mascota en las herramientas de contenido no termina una sesión de estudio.
 
 ## Límites de esta entrega
 

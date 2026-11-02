@@ -56,7 +56,8 @@ bool applySettings(JsonVariantConst json,pet::Settings& s) {
     return s.gestureMaxCm>=s.gestureMinCm+10;
 }
 }
-bool AppService::begin(const pet::Settings& settings) {
+bool AppService::begin(const pet::Settings& settings,StudyService& study) {
+    study_=&study;
     settings_=settings;mutex_=xSemaphoreCreateMutex();bleQueue_=xQueueCreate(3,sizeof(BleRequest*));
     bleAck_=xSemaphoreCreateBinary();
     if(!mutex_||!bleQueue_||!bleAck_)return false;
@@ -157,11 +158,26 @@ void AppService::execute(JsonVariantConst req,JsonDocument& reply,const std::str
     if(!pet::app::sameToken(supplied,token_)){fail("Vinculacion requerida");return;}
     lastContact_=millis();contacted_=true;
     playback_.heartbeat(millis());
+    const bool studyCommand=op.rfind("study.",0)==0;
+    if(localBusy_&&(op=="study.start"||op=="study.resume"||op=="study.skip"||op=="study.configure")){
+        fail("Cierra los ajustes de la OLED primero");return;
+    }
+    if(studyCommand){
+        study_->execute(req,reply.as<JsonObject>());
+        if(reply["ok"].as<bool>()&&op!="study.get"){
+            interaction_=true;
+            if(study_->active()){playback_.stop();playingId_.clear();}
+        }
+        return;
+    }
     if(localBusy_&&(op=="text"||op=="play"||op=="settings.set")){fail("Cierra los ajustes de la OLED primero");return;}
+    if(study_->active()&&(op=="text"||op=="play")){fail("Termina el modo estudio antes de mostrar otro contenido");return;}
     if(op=="ping")return;
     if(op=="status"||op=="settings.get"){
         settingsJson(reply["settings"].to<JsonObject>(),settings_);reply["active"]=playback_.active(millis());
-        reply["storage"]=fsReady_;reply["ip"]=WiFi.localIP().toString();reply["firmware"]="3.0.0";return;
+        reply["storage"]=fsReady_;reply["ip"]=WiFi.localIP().toString();reply["firmware"]="3.1.0";
+        JsonDocument studyRequest;studyRequest["op"]="study.get";
+        study_->execute(studyRequest.as<JsonVariantConst>(),reply.as<JsonObject>());return;
     }
     if(op=="settings.set"){
         auto next=settings_;if(!applySettings(req["settings"],next)){fail("Revisa los valores de ajustes");return;}

@@ -1,5 +1,6 @@
 #pragma once
 #include "AppProtocol.h"
+#include "StudyService.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
@@ -12,7 +13,7 @@
 // Wi-Fi and BLE share a bounded command protocol; the display loop owns settings.
 class AppService {
 public:
-    bool begin(const pet::Settings& settings);
+    bool begin(const pet::Settings& settings,StudyService& study);
     void poll();
     void openPairing();
     void closePairing();
@@ -41,6 +42,7 @@ private:
     unsigned assetCount();
     void cancelUpload();
     AsyncWebServer server_{8080};
+    StudyService* study_=nullptr;
     SemaphoreHandle_t mutex_=nullptr;
     QueueHandle_t bleQueue_=nullptr;
     SemaphoreHandle_t bleAck_=nullptr;

@@ -2,7 +2,7 @@
 
 Aplicación nativa en Kotlin y Jetpack Compose, Android **8.0/API 26 o posterior**. Wi-Fi local y BLE cifrado comparten el protocolo documentado en [PROTOCOLO_APP.md](../docs/PROTOCOLO_APP.md).
 
-**[Descargar APK MiniPet 3.0.0](../releases/android/MiniPet-3.0.0-debug.apk?raw=true)**. La copia verificada está en `releases/android` junto con su SHA-256. **Las demás APK/AAB, las claves de firma y los directorios de compilación están excluidos de Git.** Es una compilación de prueba firmada, paquete `cl.maxghos.minipet`; no es una publicación en Google Play.
+**[Descargar APK MiniPet 3.1.0](../releases/android/MiniPet-3.1.0-debug.apk?raw=true)**. La copia verificada está en `releases/android` junto con su SHA-256. Conserva la firma de la APK 3.0.0 publicada, que también sigue disponible. **Las demás APK/AAB, las claves de firma y los directorios de compilación están excluidos de Git.** Es una compilación de prueba firmada, paquete `cl.maxghos.minipet`, `versionCode=4`; no es una publicación en Google Play.
 
 ## Compilar en Android Studio
 
@@ -23,8 +23,8 @@ En Windows usa `gradlew.bat`. La APK aparece en `app/build/outputs/apk/debug/app
 ## Pantallas
 
 - **Conectar:** buscar por Wi-Fi/mDNS, escribir una IP local o buscar por BLE; vincular con el PIN de la OLED.
-- **Texto:** páginas centradas o desplazamiento, velocidad, vista previa con la misma fuente y opción de mantener mientras haya sesión.
-- **Media:** importar imagen, GIF o vídeo; encuadre, zoom, giro, contraste, umbral, inversión y tramado. Preparación en el teléfono, hasta 30 s/15 fps.
+- **Estudio:** Pomodoro con programas, tiempos personalizados, cuenta atrás, pausas y resumen. El ESP32 es la fuente del estado; el teléfono no avanza etapas por su cuenta. [Guía de estudio](../docs/ESTUDIO.md).
+- **Enviar:** dos vistas, Texto e Imagen/GIF/vídeo. Páginas centradas o desplazamiento, fuente compartida, recorte/zoom/giro/contraste/umbral/inversión/tramado y clips de hasta 30 s/15 fps.
 - **Biblioteca:** archivos del teléfono y los ocho espacios de MiniPet; mostrar, guardar sin mostrar y eliminar.
 - **Ajustes:** leer/aplicar módulos, humor, brillo, mensajes, No molestar, clima, tiempos y distancias. Se conservan en el ESP32.
 
@@ -35,6 +35,8 @@ Las credenciales de vinculación se guardan cifradas con una clave de Android Ke
 ## Pruebas
 
 `testDebugUnitTest` incluye conversión a monocromo, encuadre/giro/tramado, formato binario/CRC, comparación con fixtures producidos por el C++ del firmware, paginación/acentos, transferencia por bloques, cancelación y solicitudes HTTP reales contra un servidor local de prueba. Robolectric también inicia y dibuja las cinco pantallas y prueba importar un PNG con el decodificador Android y guardarlo/leerlo de la biblioteca.
+
+Las pruebas de estudio consumen `study_cycle.json`, generado por el temporizador C++, y comprueban cuenta atrás monotónica, pausa/espera, configuración, comandos con revisión y rechazo de operaciones antiguas. Las pruebas de Compose navegan por las pestañas y verifican los controles de concentración, descanso, pausa, espera y resumen.
 
 Esto no comprueba la radio física, el selector de cada fabricante, los códecs reales de vídeo/GIF del teléfono ni la comunicación con un ESP32 conectado. Esas pruebas se realizan siguiendo [APP_ANDROID.md](../docs/APP_ANDROID.md).
 

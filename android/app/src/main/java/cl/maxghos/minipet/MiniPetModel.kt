@@ -10,6 +10,7 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.net.Uri
 import android.os.ParcelUuid
+import android.os.SystemClock
 import androidx.compose.runtime.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,7 +20,7 @@ import org.json.JSONObject
 data class FoundDevice(val title: String,val address: String,val bluetooth: Boolean)
 data class DeviceAsset(val id: String,val title: String,val frames: Int,val fps: Int)
 data class AppState(
-    val tab: Int=0,val address: String="192.168.4.1:8080",val pin: String="",
+    val tab: Int=0,val sendTab: Int=0,val address: String="192.168.4.1:8080",val pin: String="",
     val bluetooth: Boolean=false,val devices: List<FoundDevice> = emptyList(),
     val connected: Boolean=false,val connectionName: String="",val busy: Boolean=false,
     val scanning: Boolean=false,val progress: Float=0f,val notice: String="",val error: Boolean=false,
@@ -27,7 +28,9 @@ data class AppState(
     val start: Float=0f,val seconds: Float=5f,val fps: Int=10,val prepared: ByteArray?=null,val preparedId: String?=null,
     val local: List<LocalAsset> = emptyList(),val remote: List<DeviceAsset> = emptyList(),
     val settings: String="{}",val text: String="Hola, MiniPet",val scroll: Boolean=false,
-    val speed: Int=25,val duration: Int=10,val fixed: Boolean=false,val loop: Boolean=true
+    val speed: Int=25,val duration: Int=10,val fixed: Boolean=false,val loop: Boolean=true,
+    val study: StudyStatus?=null,val studySupported: Boolean=false,
+    val studyDraft: StudyDraft=StudyDraft(),val studyDirty: Boolean=false
 )
 class MiniPetModel(application: Application): AndroidViewModel(application) {
     var state by mutableStateOf(AppState());private set
@@ -57,7 +60,10 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
         }
     }
     fun cancel(){job?.cancel()}
-    fun foreground(value: Boolean){foreground=value}
+    fun foreground(value: Boolean){
+        foreground=value
+        if(value&&state.connected&&state.studySupported)viewModelScope.launch{runCatching{refreshStudy()}}
+    }
     private fun linked(): DeviceClient=client ?: throw DeviceFailure("Conecta MiniPet primero")
     fun connect(device: FoundDevice?=null)=work("Conectando con MiniPet…"){
         stopDiscovery()
@@ -76,11 +82,16 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
             client?.close();heartbeat?.cancel();client=candidate
             if(!selected.bluetooth)vault.address=endpoint
             state=state.copy(connected=true,connectionName=if(selected.bluetooth)"Bluetooth BLE" else endpoint,
-                settings=response.getJSONObject("settings").toString(),pin="",bluetooth=selected.bluetooth)
+                settings=response.getJSONObject("settings").toString(),pin="",bluetooth=selected.bluetooth,
+                studySupported=response.has("study"),study=null,studyDirty=false)
+            response.optJSONObject("study")?.let{acceptStudy(StudyStatus.parse(it,SystemClock.elapsedRealtime()))}
             heartbeat=viewModelScope.launch {
                 while(isActive){
-                    delay(5000)
-                    if(foreground)try{candidate.call("ping")}catch(_:Exception){
+                    delay(if(state.studySupported)2000 else 5000)
+                    if(foreground)try{
+                        if(state.studySupported)refreshStudy() else candidate.call("ping")
+                    }catch(error:CancellationException){throw error}
+                    catch(_:Exception){
                         if(client===candidate){client=null;candidate.close();state=state.copy(connected=false);announce("Conexión perdida. MiniPet continúa por su cuenta.",true)}
                         break
                     }
@@ -91,6 +102,42 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
         }catch(error:Exception){candidate.close();throw error}
     }
     fun disconnect(){heartbeat?.cancel();client?.close();client=null;state=state.copy(connected=false);announce("Desconectado. MiniPet continúa por su cuenta.")}
+    private fun acceptStudy(value: StudyStatus){
+        val previous=state.study
+        state=state.copy(study=value,studyDraft=if(!state.studyDirty||value.active)StudyDraft.from(value.config) else state.studyDraft,
+            studyDirty=state.studyDirty&&!value.active)
+        if(previous!=null&&previous.eventId!=value.eventId&&value.eventAgeMs<10000){
+            when(value.event){
+                "focusDone"->announce(if(value.phase=="longBreak")"Ciclo completado. Te toca un descanso largo." else "Bloque completado. Es momento de descansar.")
+                "breakDone"->announce(if(value.state=="waiting")"Terminó el descanso. Continúa cuando estés listo." else "Terminó el descanso. Volvemos al estudio.")
+                "recovered"->announce("Sesión recuperada y pausada. Continúa cuando estés listo.")
+            }
+        }
+    }
+    private suspend fun refreshStudy(){
+        val current=linked();val value=StudyClient(current).get(SystemClock::elapsedRealtime)
+        if(client===current)acceptStudy(value)
+    }
+    fun syncStudy()=work("Sincronizando estudio…"){refreshStudy();announce("Estado de estudio actualizado")}
+    fun editStudy(change: (StudyDraft)->StudyDraft){state=state.copy(studyDraft=change(state.studyDraft),studyDirty=true)}
+    fun studyPreset(config: StudyConfig){editStudy{StudyDraft.from(config)}}
+    fun studyAction(action: String,expectedRevision: Long?=null)=work("Actualizando la sesión…"){
+        val current=state.study ?: throw DeviceFailure("Actualiza el firmware y sincroniza MiniPet primero")
+        val config=if(action=="start"||action=="configure")state.studyDraft.config()
+            ?: throw DeviceFailure("Revisa los minutos y el número de bloques") else null
+        try{
+            val value=StudyClient(linked()).action(action,expectedRevision?:current.revision,config,SystemClock::elapsedRealtime)
+            if(config!=null)state=state.copy(studyDirty=false)
+            acceptStudy(value)
+            announce(when(action){"start"->"Vamos a estudiar. MiniPet se encarga del tiempo.";"pause"->"Sesión pausada. Tómate el tiempo que necesites."
+                "resume"->"Continuamos con la etapa pendiente.";"skip"->"Etapa saltada. El bloque incompleto no suma como completado."
+                "stop"->"Sesión terminada. Aquí queda tu resumen.";else->"Programa guardado en MiniPet."})
+            if(!value.persisted)announce("La sesión está disponible, pero no se pudo guardar para un reinicio.",true)
+        }catch(error:Exception){
+            withContext(NonCancellable){runCatching{refreshStudy()}}
+            throw error
+        }
+    }
     fun sendText()=work("Enviando mensaje…"){
         require(state.text.isNotBlank()&&state.text.toByteArray().size<=4096){"Usa entre 1 y 4096 bytes de texto"}
         linked().call("text",JSONObject().put("text",state.text).put("scroll",state.scroll).put("speed",state.speed)
@@ -100,7 +147,7 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
     fun stop()=work("Volviendo a la mascota…"){linked().call("stop");announce("MiniPet recuperó su pantalla habitual")}
     fun choose(uri: Uri)=work("Abriendo archivo…"){
         val source=importer.inspect(uri)
-        state=state.copy(source=source,start=0f,seconds=minOf(5f,source.seconds.coerceAtLeast(1f)),prepared=null,tab=2)
+        state=state.copy(source=source,start=0f,seconds=minOf(5f,source.seconds.coerceAtLeast(1f)),prepared=null,tab=2,sendTab=1)
         prepareNow()
     }
     fun prepare()=work("Adaptando a 128 × 32…"){prepareNow()}
@@ -132,7 +179,7 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
         transfer(asset.id,asset.title,data,show)
     }
     fun previewSaved(asset: LocalAsset)=work("Abriendo ${asset.title}…"){
-        state=state.copy(prepared=withContext(Dispatchers.IO){library.read(asset.id)},preparedId=asset.id,source=null,tab=2)
+        state=state.copy(prepared=withContext(Dispatchers.IO){library.read(asset.id)},preparedId=asset.id,source=null,tab=2,sendTab=1)
         announce("Vista previa de ${asset.title}")
     }
     fun deleteLocal(id: String)=work("Eliminando del teléfono…"){

@@ -46,12 +46,14 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun MiniPetApp(model: MiniPetModel) {
     val state=model.state
+    val scroll=rememberScrollState()
+    LaunchedEffect(state.tab,state.sendTab,state.study?.active){scroll.scrollTo(0)}
     MaterialTheme(colorScheme=Colors){
         Scaffold(topBar={TopAppBar(title={Column{Text("MiniPet",fontWeight=FontWeight.Bold);Text(if(state.connected)state.connectionName else "Tu compañero, a tu manera",style=MaterialTheme.typography.labelMedium)}})},
-            bottomBar={NavigationBar{listOf("Conectar","Texto","Media","Biblioteca","Ajustes").forEachIndexed{i,title->
-                NavigationBarItem(selected=state.tab==i,onClick={model.edit{it.copy(tab=i)}},icon={Text(listOf("◎","Aa","▧","▤","⚙")[i])},label={Text(title)})
+            bottomBar={NavigationBar{listOf("Conectar","Estudio","Enviar","Biblioteca","Ajustes").forEachIndexed{i,title->
+                NavigationBarItem(selected=state.tab==i,onClick={model.edit{it.copy(tab=i)}},icon={Text(listOf("◎","◷","Aa","▤","⚙")[i])},label={Text(title)})
             }}}){padding->
-            Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(18.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
+            Column(Modifier.fillMaxSize().padding(padding).verticalScroll(scroll).padding(18.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
                 if(state.notice.isNotBlank())Card(colors=CardDefaults.cardColors(containerColor=if(state.error)MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant)){
                     Text(state.notice,Modifier.padding(14.dp),style=MaterialTheme.typography.bodyMedium)
                 }
@@ -59,20 +61,21 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
                     if(state.progress>0)LinearProgressIndicator(progress={state.progress},modifier=Modifier.fillMaxWidth()) else LinearProgressIndicator(Modifier.fillMaxWidth())
                     TextButton(onClick={model.cancel()}){Text("Cancelar operación")}
                 }
-                when(state.tab){0->ConnectionPanel(model);1->TextPanel(model);2->MediaPanel(model);3->LibraryPanel(model);4->SettingsPanel(model)}
+                if(state.tab!=1&&state.study?.active==true)StudyShortcut(model)
+                when(state.tab){0->ConnectionPanel(model);1->StudyPanel(model);2->SendPanel(model);3->LibraryPanel(model);4->SettingsPanel(model)}
                 Spacer(Modifier.height(12.dp))
             }
         }
     }
 }
-@Composable private fun Panel(title: String,body: @Composable ColumnScope.()->Unit){
+@Composable fun Panel(title: String,body: @Composable ColumnScope.()->Unit){
     Card(shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth()){
         Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text(title,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold);body()
         }
     }
 }
-@Composable private fun Toggle(label: String,checked: Boolean,enabled: Boolean=true,onChange:(Boolean)->Unit){
+@Composable fun Toggle(label: String,checked: Boolean,enabled: Boolean=true,onChange:(Boolean)->Unit){
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text(label,Modifier.weight(1f));Switch(checked=checked,onCheckedChange=onChange,enabled=enabled)}
 }
 @Composable private fun Control(label: String,value: Float,range: ClosedFloatingPointRange<Float>,steps: Int=0,enabled: Boolean=true,onChange:(Float)->Unit){
@@ -117,7 +120,7 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
         }else{
             Text("Puedes dejar la mascota a su ritmo, enviarle algo o preparar tu biblioteca.")
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                Button(onClick={model.edit{it.copy(tab=1)}}){Text("Enviar algo")}
+                Button(onClick={model.edit{it.copy(tab=1)}}){Text("Modo estudio")}
                 OutlinedButton(onClick={model.disconnect()},enabled=!s.busy){Text("Desconectar")}
             }
             TextButton(onClick={model.stop()},enabled=!s.busy){Text("Volver a la mascota ahora")}
@@ -126,6 +129,17 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
     Panel("Antes de empezar"){
         Text("Instala el firmware Funciones + apk en el ESP32. El cableado y tus ajustes actuales se conservan. Wi-Fi es la opción más rápida para imágenes y clips; BLE también funciona, con transferencias más lentas.")
     }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun SendPanel(model: MiniPetModel){
+    val s=model.state
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()){
+        listOf("Texto","Imagen / GIF / vídeo").forEachIndexed{i,label->
+            SegmentedButton(selected=s.sendTab==i,onClick={model.edit{it.copy(sendTab=i)}},shape=SegmentedButtonDefaults.itemShape(i,2)){Text(label)}
+        }
+    }
+    if(s.study?.active==true)Text("MiniPet está en modo estudio. Puedes preparar o guardar archivos; termina la sesión para mostrarlos.")
+    if(s.sendTab==0)TextPanel(model) else MediaPanel(model)
 }
 @Composable private fun rememberLauncherForPermissions(onGranted:()->Unit): (Array<String>)->Unit {
     val launcher=androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){result->if(result.values.all{it})onGranted()}
@@ -141,7 +155,7 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
         PixelPreview(listOf(s.text,s.scroll,s.speed)){age->OledText.frame(s.text,age,model.font,s.scroll,s.speed)}
         Text("En páginas se centra en ambos ejes. Los textos largos se leen completos.",style=MaterialTheme.typography.bodySmall)
         Toggle("Mantener hasta que lo quite",s.fixed,!s.busy){value->model.edit{it.copy(fixed=value)}}
-        Button(onClick={model.sendText()},enabled=s.connected&&!s.busy&&s.text.isNotBlank(),modifier=Modifier.fillMaxWidth()){Text("Mostrar mensaje")}
+        Button(onClick={model.sendText()},enabled=s.connected&&!s.busy&&s.study?.active!=true&&s.text.isNotBlank(),modifier=Modifier.fillMaxWidth()){Text("Mostrar mensaje")}
         OutlinedButton(onClick={model.stop()},enabled=s.connected&&!s.busy,modifier=Modifier.fillMaxWidth()){Text("Volver a MiniPet")}
     }
 }
@@ -175,7 +189,7 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
         }
         Text("Hasta 30 s y 15 fps. El teléfono adapta el archivo; no se envía audio. Tras cambiar el encuadre, prepara otra vez la vista previa.",style=MaterialTheme.typography.bodySmall)
         PlaybackControls(model)
-        Button(onClick={model.sendPrepared(true)},enabled=s.connected&&!s.busy&&info!=null,modifier=Modifier.fillMaxWidth()){Text("Mostrar ahora")}
+        Button(onClick={model.sendPrepared(true)},enabled=s.connected&&!s.busy&&s.study?.active!=true&&info!=null,modifier=Modifier.fillMaxWidth()){Text("Mostrar ahora")}
         OutlinedButton(onClick={model.sendPrepared(false)},enabled=s.connected&&!s.busy&&info!=null,modifier=Modifier.fillMaxWidth()){Text("Guardar en MiniPet sin mostrar")}
         TextButton(onClick={model.saveLocal()},enabled=!s.busy&&info!=null){Text("Guardar en el teléfono")}
         if(s.connected)TextButton(onClick={model.stop()},enabled=!s.busy){Text("Volver a la mascota")}
@@ -196,7 +210,7 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
             Text(asset.title,fontWeight=FontWeight.Bold);Text("${asset.frames} cuadros · ${asset.fps} fps",style=MaterialTheme.typography.labelSmall)
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 TextButton(onClick={model.previewSaved(asset)},enabled=!s.busy){Text("Ver")}
-                TextButton(onClick={model.sendSaved(asset,true)},enabled=s.connected&&!s.busy){Text("Mostrar")}
+                TextButton(onClick={model.sendSaved(asset,true)},enabled=s.connected&&!s.busy&&s.study?.active!=true){Text("Mostrar")}
                 TextButton(onClick={model.sendSaved(asset,false)},enabled=s.connected&&!s.busy){Text("Guardar en MiniPet")}
             }
             TextButton(onClick={model.deleteLocal(asset.id)},enabled=!s.busy){Text("Eliminar del teléfono")};HorizontalDivider()
@@ -210,7 +224,7 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
             s.remote.forEach{asset->
                 Text(asset.title,fontWeight=FontWeight.Bold)
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                    Button(onClick={model.playRemote(asset.id)},enabled=!s.busy){Text("Mostrar")}
+                    Button(onClick={model.playRemote(asset.id)},enabled=!s.busy&&s.study?.active!=true){Text("Mostrar")}
                     TextButton(onClick={model.deleteRemote(asset.id)},enabled=!s.busy){Text("Eliminar de MiniPet")}
                 };HorizontalDivider()
             }

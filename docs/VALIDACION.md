@@ -1,5 +1,28 @@
 # Validación de esta versión
 
+## V3.1: modo estudio / Pomodoro
+
+Comprobaciones del **1 de noviembre de 2026**, fecha local de Santiago. Las pruebas del temporizador usan avance simulado y el mismo motor/codec C++ del firmware. No hay un ESP32 ni un teléfono físico conectados al entorno.
+
+| Comprobación | Resultado |
+|---|---|
+| Firmware N16R8 con TTP223 y con pulsador mecánico | Ambas compilaciones correctas; aproximadamente 1,35 MB de flash y 58,9 kB de RAM estática |
+| Pruebas C++ con AddressSanitizer/UndefinedBehaviorSanitizer | 28 suites, 7.358 comprobaciones correctas |
+| Ciclo completo 25/5/15 | Cuatro bloques, descansos cortos, descanso largo y vuelta al primer bloque; confirmación manual por defecto |
+| Controles y tiempos | Pausa/reanudación, saltos sin acreditar bloques, resumen, opciones de inicio automático y espera sin consumir tiempo |
+| Límites y recuperación | Rangos/tipos inválidos, registros incompletos/corruptos, reinicio pausado, retrasos de ejecución y desbordamiento de `millis()` |
+| Órdenes concurrentes | Revisión de estado impide aplicar una orden antigua a otra etapa; validación del protocolo compartido |
+| Android | 23 pruebas JUnit/Robolectric/Compose, ninguna omitida; Lint sin incidencias |
+| Contrato Android/C++ | Nueve estados en `study_cycle.json` producidos por C++; cuenta atrás, resumen, pausa y recuperación leídos por Kotlin |
+| Interfaz | Navegación real entre las cinco pestañas, dos vistas de Enviar, controles de estudio/descanso/pausa/espera, confirmaciones y bloqueo de acciones sin estado reciente |
+| Capturas | Vistas recompuestas y dibujadas con gráficos nativos; cinco pestañas distintas y estados de estudio revisados |
+| APK 3.1.0 | Firma y alineación verificadas; mismo certificado que la APK 3.0.0, código de versión aumentado a 4 |
+| Regresiones | 8.760 comprobaciones de zona horaria y 100 frases; fixtures de texto/media conservados |
+
+**Pendiente en hardware:** temporización percibida y legibilidad en la OLED real, transferencias y control por Wi-Fi/BLE en un teléfono, guardado/recuperación NVS al cortar alimentación y convivencia con los sensores durante sesiones largas. No se han probado radios ni flash física desde el host. La app no incluye alarmas de teléfono en segundo plano; al cerrarla, el temporizador y los avisos visuales siguen en el ESP32. La prueba rápida está al final de [ESTUDIO.md](ESTUDIO.md).
+
+La nueva versión mantiene intacto el formato de ajustes de mascota V2 y usa un namespace NVS independiente para estudio. La firma de actualización se comprueba contra la APK anterior publicada; esto no sustituye instalar ambas consecutivamente en el teléfono. Los resultados de CI posteriores al push son independientes de las pruebas locales.
+
 ## V3: Funciones + apk
 
 Comprobaciones ejecutadas el **30 de octubre de 2026** en el entorno de desarrollo. No hay un ESP32 ni un teléfono conectados a este entorno; las pruebas de software no sustituyen la prueba conjunta en tus dispositivos.
@@ -16,7 +39,7 @@ Comprobaciones ejecutadas el **30 de octubre de 2026** en el entorno de desarrol
 | HTTP de la app | Peticiones reales contra un servidor local de prueba: vinculación, autenticación y estado |
 | Transferencias | Bloques, orden de offsets, finalización y cancelación comprobados con transporte de prueba |
 | Imágenes y biblioteca del teléfono | Decodificación PNG de Android, conversión y guardado/lectura comprobados con Robolectric |
-| Interfaz Android | Las cinco pestañas renderizadas con gráficos nativos de Robolectric y capturas revisadas |
+| Interfaz Android | Arranque y captura con gráficos nativos de Robolectric; V3.1 añade verificación de navegación y controles con Compose |
 | Android Lint | Sin incidencias |
 | APK Android 8.0 o superior | Compilación correcta; firma APK v2 y alineación verificadas con las herramientas de Android |
 | Preparación del entorno | Scripts de instalación y construcción Android ejecutados; clave de prueba fuera del repositorio |

@@ -1,0 +1,236 @@
+[
+  {
+    "atMs": 0,
+    "study": {
+      "config": {
+        "focusMinutes": 25,
+        "shortBreakMinutes": 5,
+        "longBreakMinutes": 15,
+        "blocksBeforeLong": 4,
+        "autoBreak": true,
+        "autoFocus": false
+      },
+      "phase": "idle",
+      "state": "idle",
+      "active": false,
+      "remainingMs": 0,
+      "durationMs": 0,
+      "round": 1,
+      "completedBlocks": 0,
+      "focusMs": 0,
+      "breakMs": 0,
+      "revision": 0,
+      "eventId": 0,
+      "event": "none",
+      "eventAgeMs": 0
+    }
+  },
+  {
+    "atMs": 0,
+    "study": {
+      "config": {
+        "focusMinutes": 1,
+        "shortBreakMinutes": 1,
+        "longBreakMinutes": 2,
+        "blocksBeforeLong": 2,
+        "autoBreak": true,
+        "autoFocus": false
+      },
+      "phase": "focus",
+      "state": "running",
+      "active": true,
+      "remainingMs": 60000,
+      "durationMs": 60000,
+      "round": 1,
+      "completedBlocks": 0,
+      "focusMs": 0,
+      "breakMs": 0,
+      "revision": 2,
+      "eventId": 1,
+      "event": "started",
+      "eventAgeMs": 0
+    }
+  },
+  {
+    "atMs": 59999,
+    "study": {
+      "config": {
+        "focusMinutes": 1,
+        "shortBreakMinutes": 1,
+        "longBreakMinutes": 2,
+        "blocksBeforeLong": 2,
+        "autoBreak": true,
+        "autoFocus": false
+      },
+      "phase": "focus",
+      "state": "running",
+      "active": true,
+      "remainingMs": 1,
+      "durationMs": 60000,
+      "round": 1,
+      "completedBlocks": 0,
+      "focusMs": 59999,
+      "breakMs": 0,
+      "revision": 2,
+      "eventId": 1,
+      "event": "started",
+      "eventAgeMs": 59999
+    }
+  },
+  {
+    "atMs": 60000,
+    "study": {
+      "config": {
+        "focusMinutes": 1,
+        "shortBreakMinutes": 1,
+        "longBreakMinutes": 2,
+        "blocksBeforeLong": 2,
+        "autoBreak": true,
+        "autoFocus": false
+      },
+      "phase": "shortBreak",
+      "state": "running",
+      "active": true,
+      "remainingMs": 60000,
+      "durationMs": 60000,
+      "round": 1,
+      "completedBlocks": 1,
+      "focusMs": 60000,
+      "breakMs": 0,
+      "revision": 3,
+      "eventId": 2,
+      "event": "focusDone",
+      "eventAgeMs": 0
+    }
+  },
+  {
+    "atMs": 120000,
+    "study": {
+      "config": {
+        "focusMinutes": 1,
+        "shortBreakMinutes": 1,
+        "longBreakMinutes": 2,
+        "blocksBeforeLong": 2,
+        "autoBreak": true,
+        "autoFocus": false
+      },
+      "phase": "focus",
+      "state": "waiting",
+      "active": true,
+      "remainingMs": 60000,
+      "durationMs": 60000,
+      "round": 2,
+      "completedBlocks": 1,
+      "focusMs": 60000,
+      "breakMs": 60000,
+      "revision": 4,
+      "eventId": 3,
+      "event": "breakDone",
+      "eventAgeMs": 0
+    }
+  },
+  {
+    "atMs": 190000,
+    "study": {
+      "config": {
+        "focusMinutes": 1,
+        "shortBreakMinutes": 1,
+        "longBreakMinutes": 2,
+        "blocksBeforeLong": 2,
+        "autoBreak": true,
+        "autoFocus": false
+      },
+      "phase": "focus",
+      "state": "paused",
+      "active": true,
+      "remainingMs": 50000,
+      "durationMs": 60000,
+      "round": 2,
+      "completedBlocks": 1,
+      "focusMs": 70000,
+      "breakMs": 60000,
+      "revision": 6,
+      "eventId": 5,
+      "event": "paused",
+      "eventAgeMs": 0
+    }
+  },
+  {
+    "atMs": 200000,
+    "study": {
+      "config": {
+        "focusMinutes": 1,
+        "shortBreakMinutes": 1,
+        "longBreakMinutes": 2,
+        "blocksBeforeLong": 2,
+        "autoBreak": true,
+        "autoFocus": false
+      },
+      "phase": "focus",
+      "state": "paused",
+      "active": true,
+      "remainingMs": 50000,
+      "durationMs": 60000,
+      "round": 2,
+      "completedBlocks": 1,
+      "focusMs": 70000,
+      "breakMs": 60000,
+      "revision": 7,
+      "eventId": 6,
+      "event": "recovered",
+      "eventAgeMs": 0
+    }
+  },
+  {
+    "atMs": 250000,
+    "study": {
+      "config": {
+        "focusMinutes": 1,
+        "shortBreakMinutes": 1,
+        "longBreakMinutes": 2,
+        "blocksBeforeLong": 2,
+        "autoBreak": true,
+        "autoFocus": false
+      },
+      "phase": "longBreak",
+      "state": "running",
+      "active": true,
+      "remainingMs": 120000,
+      "durationMs": 120000,
+      "round": 2,
+      "completedBlocks": 2,
+      "focusMs": 120000,
+      "breakMs": 60000,
+      "revision": 9,
+      "eventId": 8,
+      "event": "focusDone",
+      "eventAgeMs": 0
+    }
+  },
+  {
+    "atMs": 251000,
+    "study": {
+      "config": {
+        "focusMinutes": 1,
+        "shortBreakMinutes": 1,
+        "longBreakMinutes": 2,
+        "blocksBeforeLong": 2,
+        "autoBreak": true,
+        "autoFocus": false
+      },
+      "phase": "idle",
+      "state": "idle",
+      "active": false,
+      "remainingMs": 0,
+      "durationMs": 0,
+      "round": 2,
+      "completedBlocks": 2,
+      "focusMs": 120000,
+      "breakMs": 61000,
+      "revision": 10,
+      "eventId": 9,
+      "event": "stopped",
+      "eventAgeMs": 0
+    }
+  }
+]

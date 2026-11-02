@@ -3,10 +3,13 @@
 ## Prioridades
 
 1. Configuración Wi-Fi o menú: sin gestos ni mensajes autónomos.
-2. Contenido solicitado desde la app: texto/media; sensores y red continúan, iniciativas visuales pausadas.
-3. Consulta solicitada: posible comentario breve, clima, reacción de ~2 s, reloj y retorno.
-4. Intervención autónoma: mensaje paginado o reacción ambiental y retorno a los ojos.
-5. Pantalla habitual y animación.
+2. Modo estudio activo, pausado o esperando: etapa, ojos y cuenta atrás; sin gestos ni iniciativas que lo interrumpan.
+3. Contenido solicitado desde la app: texto/media; sensores y red continúan, iniciativas visuales pausadas.
+4. Consulta solicitada: posible comentario breve, clima, reacción de ~2 s, reloj y retorno.
+5. Intervención autónoma: mensaje paginado o reacción ambiental y retorno a los ojos.
+6. Pantalla habitual y animación.
+
+El modo estudio se inicia explícitamente desde la app o **Ajustes → Modo estudio**. Pausar no lo cierra. No depende de la conexión ni de NTP; los avisos son visuales y no utilizan destellos. Para recuperar las funciones habituales, termina la sesión. Véase [ESTUDIO.md](ESTUDIO.md).
 
 La conexión de la app, los mensajes de sesión y guardar archivos no cuentan como atención ni cambian la pantalla. Mostrar contenido/aplicar ajustes sí es una interacción. Al terminar, detener o perder la sesión durante ~15 s, MiniPet recupera su pantalla habitual y respeta una pausa antes de nuevas iniciativas. El menú físico interrumpe el contenido externo. La reproducción fijada que expiró no reaparece al reconectar. Ver [APP_ANDROID.md](APP_ANDROID.md).
 
@@ -69,6 +72,7 @@ El texto es «El clima ahora indica lluvia»: representa la estimación de Open-
 | Reacción al clima | Activada; consulta y ambiente |
 | Avisos del clima | Activados; requieren también Mensajes |
 | Destello tormenta | Desactivado; inversión breve opcional de hasta ~66 ms |
+| Modo estudio | Submenú de tiempos, automatización y controles; 25/5/15 min y descanso largo cada cuatro bloques |
 | Vincular app | Muestra PIN temporal; Wi-Fi local o BLE; sin router abre la red de MiniPet |
 | Configurar WiFi | Abre una red temporal protegida durante un máximo de 5 min |
 | Restablecer | Prepara los valores iniciales; requiere Guardar y salir; conserva Wi-Fi |

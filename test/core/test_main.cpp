@@ -169,11 +169,13 @@ void weatherValidation(const char* path) {
 }
 void testV2(unsigned& suites,unsigned& assertions);
 void testApp(unsigned& suites,unsigned& assertions);
+void testStudy(unsigned& suites,unsigned& assertions);
 int main(int argc,char** argv) {
     gestureLifecycle(); gestureFailuresAndRollover(); sensorFiltering(); touchAndMenu();
     enabledModulesAndQuery(); humorAndPriorities(); settingsAndQuietHours(); faceFramesAndMessages();
     weatherValidation(argc>1 ? argv[1] : "test/core/weather_sample.json");
     testV2(suites,assertions);
     testApp(suites,assertions);
+    testStudy(suites,assertions);
     std::cout << suites << " suites passed, " << assertions << " assertions\n";
 }

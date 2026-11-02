@@ -1,12 +1,14 @@
-# MiniPet V3 · ESP32-S3 + Android
+# MiniPet V3.1 · ESP32-S3 + Android + Pomodoro
 
 Mascota de escritorio con ojos animados en una OLED **SSD1306 I²C de 128×32**, sensores PIR y ultrasónico, reloj de Santiago y clima de Puente Alto.
 
-**Funciones + apk:** una app Android nativa amplía MiniPet por Wi-Fi local o BLE, con mensajes, imágenes/GIF/vídeos adaptados, biblioteca y ajustes. Conectarse no cambia su comportamiento; solo «Mostrar» ocupa la pantalla, y al terminar o perder la sesión recupera su funcionamiento autónomo. **[Instalación y uso de la app](docs/APP_ANDROID.md)** · **[Proyecto Android](android/README.md)** · **[Protocolo](docs/PROTOCOLO_APP.md)**.
+**Nuevo: [modo estudio / Pomodoro](docs/ESTUDIO.md).** Concentración y descansos configurables, pausa/reanudación, descanso largo por ciclos y resumen. Sigue en marcha sin la app ni internet; puedes controlarlo también desde el menú físico.
 
-**[Descargar APK MiniPet 3.0.0](releases/android/MiniPet-3.0.0-debug.apk?raw=true)** para Android 8.0 o superior. Es una compilación de prueba firmada, guardada en `releases/android` junto con su SHA-256. El repositorio también contiene su código y los pasos para compilarla; las claves de firma y los archivos generados por las compilaciones siguen excluidos.
+La app Android nativa amplía MiniPet por Wi-Fi local o BLE, con mensajes, imágenes/GIF/vídeos adaptados, biblioteca, estudio y ajustes. Conectarse no cambia su comportamiento. **[Instalación y uso de la app](docs/APP_ANDROID.md)** · **[Proyecto Android](android/README.md)** · **[Protocolo](docs/PROTOCOLO_APP.md)**.
 
-El **TTP223 se reserva para ajustes**. Una presencia sostenida en la zona del HC-SR05 solicita **clima → reacción de la mascota → hora → pantalla habitual**. El humor regula la iniciativa, las expresiones y los comentarios de la mascota; las consultas siempre se completan. La reacción se omite con el asistente desactivado, No molestar, datos anteriores o pronóstico de próximos días.
+**[Descargar APK MiniPet 3.1.0](releases/android/MiniPet-3.1.0-debug.apk?raw=true)** para Android 8.0 o superior. Actualiza primero el firmware. Es una compilación de prueba firmada con la misma clave que la APK 3.0.0, guardada en `releases/android` junto con su SHA-256. El repositorio también contiene su código y los pasos para compilarla; las claves de firma y los archivos generados por las compilaciones siguen excluidos.
+
+El **TTP223 se reserva para ajustes**. Fuera del modo estudio, una presencia sostenida en la zona del HC-SR05 solicita **clima → reacción de la mascota → hora → pantalla habitual**. El humor regula la iniciativa, las expresiones y los comentarios de la mascota; las consultas siempre se completan. La reacción se omite con el asistente desactivado, No molestar, datos anteriores o pronóstico de próximos días.
 
 ## Qué incluye
 
@@ -18,8 +20,9 @@ El **TTP223 se reserva para ajustes**. Una presencia sostenida en la zona del HC
 - Módulos independientes: asistente, reloj y clima; cualquier combinación que deje al menos uno habilitado.
 - Clima principal con icono, detalles y máximas/mínimas de tres días. Consulta gratuita de Open-Meteo para uso no comercial, conforme a sus condiciones.
 - Hora por NTP y reglas de Santiago con horario de verano. Tras sincronizar, el reloj sigue funcionando sin Wi-Fi mientras el equipo esté encendido.
-- Menú de **26 opciones**, con «Vincular app», controles independientes para frases random, reacciones y avisos del clima y destello de tormenta (apagado inicialmente). Se conservan los ajustes guardados en V1/V2 y el Wi-Fi. No requiere una clave de API meteorológica.
+- Menú de **27 opciones**, con «Modo estudio», «Vincular app», controles independientes para frases random, reacciones y avisos del clima y destello de tormenta (apagado inicialmente). Se conservan los ajustes guardados en V1/V2/V3 y el Wi-Fi. No requiere una clave de API meteorológica.
 - App Android 8.0+: previsualización exacta de 128×32, texto centrado/desplazado, recorte/zoom/giro/contraste/tramado y clips de hasta 30 s/15 fps. Bibliotecas separadas en teléfono y ESP32; guardar no cambia la pantalla.
+- Pomodoro 25/5/15 por defecto, descanso largo cada cuatro bloques, programas Clásico/Suave/Profundo y tiempos personalizados. Espera tu confirmación para volver al estudio; inicio automático opcional. Sin bromas ni consultas visuales durante la sesión, con recuperación pausada tras reiniciar.
 
 **[Guía de conexión y primera carga](docs/CONEXIONES.md)** · **[Comportamiento y ajustes](docs/COMPORTAMIENTO.md)** · **[Ver animaciones](docs/caras.html)**
 

@@ -27,9 +27,15 @@ Sensors sensors;
 Screen screen;
 NetworkService network;
 AppService app;
+StudyService study;
+pet::study::Menu studyMenu;
+pet::study::Snapshot studyState;
 pet::app::RemoteView remoteContent;
 bool appReady=false;
 bool wasRemoteActive=false;
+bool wasStudying=false;
+uint32_t studyErrorAt=0;
+bool studyError=false;
 messages::Picker picker;
 WeatherData weather,queryWeather,ambientWeather;
 bool screenReady=false,networkReady=false;
@@ -102,23 +108,32 @@ void setup() {
     Serial.begin(115200);
     loadSettings(); sensors.begin();
     screenReady=screen.begin();
-    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet V3","Hola, Puente Alto!"); screen.show(); }
+    if (screenReady) { screen.brightness(settings.brightness); screen.status("MiniPet V3.1","Hola, Puente Alto!"); screen.show(); }
     else Serial.println("OLED no disponible: revisar alimentacion, SDA 8, SCL 9 y direccion 0x3C");
     const uint32_t now=millis();
     personality.begin(now); gesture.reset(now); ambient.begin(now);
     networkReady=network.begin();
-    appReady=app.begin(settings);
+    if(!study.begin())Serial.println("No se pudo iniciar modo estudio");
+    appReady=app.begin(settings,study);
     if (!networkReady) Serial.println("No se pudo iniciar servicio de red");
-    Serial.println("MiniPet V3 iniciado. Boton: ajustes. App por WiFi :8080 o BLE.");
+    Serial.println("MiniPet V3.1 iniciado. Boton: ajustes. App por WiFi :8080 o BLE.");
 }
 void loop() {
     const uint32_t now=millis();
     const bool quiet=quietNow();
     const pet::Press press=button.update(sensors.touch(),now);
+    study.poll();study.read(studyState);
+    const bool studying=studyState.active();
+    if(studying!=wasStudying){
+        query.cancel();message=nullptr;ambientReaction=false;gesture.reset(now);
+        ambient.note(now,0,settings,esp_random(),false);
+        if(studying&&appReady)app.stop();
+        wasStudying=studying;
+    }
     if(appReady){
         app.poll();
         if(app.recentlyContacted())network.keepPortalAlive();
-        if(app.takePaired()){menu.active=false;gesture.reset(now);}
+        if(app.takePaired()){menu.active=false;studyMenu.active=false;gesture.reset(now);}
         pet::Settings requested;
         if(app.takeSettings(requested)){
             const auto previous=settings;settings=requested;
@@ -143,8 +158,29 @@ void loop() {
         if(appReady){app.stop();remoteContent.type=pet::app::Content::None;}
         if(appReady && app.pairing())app.closePairing();
         else if (network.configuring()) network.stopPortal();
-        else if (!menu.active) {
+        else if (studyMenu.active) {
+            const auto action=studyMenu.input(press,studyState);
+            const char* operation=nullptr;
+            using Action=pet::study::Menu::Action;
+            switch(action){
+            case Action::Start:operation="study.start";break;
+            case Action::Pause:operation="study.pause";break;
+            case Action::Resume:operation="study.resume";break;
+            case Action::Skip:operation="study.skip";break;
+            case Action::Stop:operation="study.stop";break;
+            case Action::Save:operation="study.configure";break;
+            default:break;
+            }
+            if(operation){
+                const auto* config=(action==Action::Start||action==Action::Save)?&studyMenu.draft:nullptr;
+                if(study.control(operation,studyState.revision,config)){
+                    study.read(studyState);
+                    if(action!=Action::Save){studyMenu.active=false;menu.active=false;}
+                }else{studyError=true;studyErrorAt=now;}
+            }
+        } else if (!menu.active) {
             menu.open(settings); query.cancel(); message=nullptr; ambientReaction=false;
+            if(studyState.active())menu.item=pet::Menu::studyItem;
         } else {
             const auto action=menu.input(press);
             if (action==pet::Menu::Action::Save) {
@@ -152,6 +188,7 @@ void loop() {
                 if (saveSettings()) { if (screenReady) screen.brightness(settings.brightness); if(appReady)app.updateSettings(settings); Serial.println("Ajustes guardados"); }
                 else { settings=previous; menu.open(menu.draft); Serial.println("No se pudo guardar ajustes"); }
             } else if (action==pet::Menu::Action::Portal && networkReady) network.startPortal();
+            else if(action==pet::Menu::Action::Study){study.read(studyState);studyMenu.open(studyState);}
             else if(action==pet::Menu::Action::PairApp && appReady){
                 if(!network.connected())network.startPortal(true);
                 app.openPairing();
@@ -160,7 +197,7 @@ void loop() {
         personality.interact(now,settings);
         gesture.reset(now); ambient.note(now,0,settings,esp_random(),false);
     }
-    if(appReady)app.localBusy(menu.active||network.configuring()||app.pairing());
+    if(appReady)app.localBusy(menu.active||studyMenu.active||network.configuring()||app.pairing());
     if (sensors.poll(now)) {
         presence.update(now,sensors.valid,sensors.cm,settings.presenceCm);
         if (sensors.valid && hadDistance && pet::elapsed(now,lastDistanceAt)<350 &&
@@ -168,20 +205,20 @@ void loop() {
             personality.react(pet::Mood::Shocked,now,1500);
         hadDistance=sensors.valid;
         if (sensors.valid) { lastDistance=sensors.cm; lastDistanceAt=now; }
-        if (menu.active || network.configuring() || query.active() || remoteActive) gesture.reset(now);
+        if (menu.active || network.configuring() || query.active() || remoteActive || studying) gesture.reset(now);
         else if (gesture.update(now,sensors.valid,sensors.cm,settings)) startQuery(now,quiet);
     }
-    personality.update(now,presence.present(),sensors.motion(now) && !menu.active && !query.active() && !remoteActive,settings);
+    personality.update(now,presence.present(),sensors.motion(now) && !menu.active && !query.active() && !remoteActive && !studying,settings);
     query.update(now);
     if (message && pet::elapsed(now,messageAt)>=messageDuration) message=nullptr;
     if (ambientReaction && pet::elapsed(now,ambientAt)>=2000) ambientReaction=false;
     const auto mood=personality.mood(now);
     const bool awake=mood!=pet::Mood::Sleeping;
-    const bool notices=awake && !quiet && settings.messages && settings.weatherNotices &&
+    const bool notices=awake && !quiet && !studying && settings.messages && settings.weatherNotices &&
         (settings.modules&(pet::Assistant|pet::Weather))==(pet::Assistant|pet::Weather);
     weatherChanges.observe(weather,now,notices);
     const bool allow=awake && !quiet && !menu.active && !network.configuring() && !query.active() &&
-        !message && !ambientReaction && !remoteActive && gesture.progress(now,settings)==0 &&
+        !message && !ambientReaction && !remoteActive && !studying && gesture.progress(now,settings)==0 &&
         mood!=pet::Mood::Shocked && mood!=pet::Mood::Attentive && homeView(now)==pet::View::Pet;
     const auto event=ambient.poll(now,settings,allow,personality.attentionDue(now,presence.present(),settings),
         weatherFresh(weather,now),esp_random(),weatherChanges.pending(now));
@@ -209,7 +246,10 @@ void loop() {
             screen.pairing(app.pin(),ip.c_str(),network.portalActive()?network.apName():"",network.apPassword(),app.pairingSeconds());
         }
         else if (network.configuring()) screen.portal(network.apName(),network.apPassword(),network.connected());
+        else if(studyError&&pet::elapsed(now,studyErrorAt)<2500)screen.message("No se pudo aplicar.\nRevisa el estado\ny los tiempos.");
+        else if(studyMenu.active)screen.studyMenu(studyMenu,studyState);
         else if (menu.active) screen.menu(menu,sensors.valid,sensors.cm);
+        else if(studyState.active()||(studyState.event==pet::study::Event::Stopped&&studyState.eventAgeMs<6500))screen.study(studyState,now,quiet?0:settings.humor);
         else if(remoteContent.type!=pet::app::Content::None)screen.remote(remoteContent);
         else if (query.joke()) screen.message(jokeMessage ? jokeMessage : "Ya voy...",query.stageAge(now));
         else if (query.active()) {

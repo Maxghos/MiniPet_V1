@@ -1,5 +1,6 @@
 #include "AppProtocol.h"
 #include "TextLayout.h"
+#include "StudyCodec.h"
 #include <ArduinoJson.h>
 #include <fstream>
 #include <sstream>
@@ -34,6 +35,19 @@ int main(int argc,char** argv){
     }
     std::string json;serializeJsonPretty(doc,json);
     json.erase(std::remove(json.begin(),json.end(),'\r'),json.end());json+='\n';
-    if(!save("text_layout.json",json,check)||!save("frame_clip.mpet",std::string(reinterpret_cast<char*>(media.data()),media.size()),check))return 1;
+    JsonDocument study;auto stages=study.to<JsonArray>();pet::study::Timer timer;
+    auto capture=[&](uint32_t now){auto stage=stages.add<JsonObject>();stage["atMs"]=now;
+        pet::study::writeSnapshot(stage["study"].to<JsonObject>(),timer.snapshot(now));};
+    capture(0);
+    pet::study::Config config;config.focusMinutes=config.shortBreakMinutes=1;config.longBreakMinutes=2;config.blocksBeforeLong=2;
+    timer.configure(config);timer.start(0);capture(0);
+    timer.update(59999);capture(59999);timer.update(60000);capture(60000);
+    timer.update(120000);capture(120000);timer.resume(180000);timer.pause(190000);capture(190000);
+    auto saved=timer.record(190000);timer.restore(saved,200000);capture(200000);
+    timer.resume(200000);timer.update(250000);capture(250000);timer.stop(251000);capture(251000);
+    std::string studyJson;serializeJsonPretty(study,studyJson);
+    studyJson.erase(std::remove(studyJson.begin(),studyJson.end(),'\r'),studyJson.end());studyJson+='\n';
+    if(!save("text_layout.json",json,check)||!save("frame_clip.mpet",std::string(reinterpret_cast<char*>(media.data()),media.size()),check)||
+        !save("study_cycle.json",studyJson,check))return 1;
     std::cout<<"App protocol fixtures "<<(check?"verified":"generated")<<"\n";
 }

@@ -36,6 +36,50 @@ void Screen::remote(const pet::app::RemoteView& content) {
     display_.setCursor(x,12);
     for(unsigned char c:encoded)display_.write(c=='\n' ? ' ' : c);
 }
+void Screen::study(const pet::study::Snapshot& s,uint32_t now,uint8_t humor) {
+    using namespace pet::study;
+    if(s.eventAgeMs<6500){
+        const char* notice=nullptr;
+        if(s.event==Event::FocusDone)notice=humor>=70?"Buen trabajo!\nTus neuronas piden\nun descanso.":"Bloque completado.\nHora de descansar.";
+        if(s.event==Event::BreakDone)notice=s.state==State::Waiting?"Descanso terminado.\nVuelve cuando\nestes listo.":"Descanso terminado.\nVolvemos al estudio.";
+        if(s.event==Event::Recovered)notice="Sesion recuperada.\nContinua cuando\nestes listo.";
+        if(s.event==Event::Stopped){
+            char summary[96];
+            snprintf(summary,sizeof(summary),"Sesion terminada.\n%lu %s\n%llu min de estudio",static_cast<unsigned long>(s.completedBlocks),s.completedBlocks==1?"bloque":"bloques",
+                static_cast<unsigned long long>(s.focusMs/60000));
+            message(summary,s.eventAgeMs);return;
+        }
+        if(notice){message(notice,s.eventAgeMs);return;}
+    }
+    clear();char value[28];
+    const bool waiting=s.state==State::Waiting,paused=s.state==State::Paused;
+    if(waiting)text(0,0,s.phase==Phase::Focus?"LISTO PARA ESTUDIAR":"LISTO PARA DESCANSAR");
+    else{
+        snprintf(value,sizeof(value),"%s %u/%u",s.phase==Phase::Focus?"FOCO":s.phase==Phase::LongBreak?"PAUSA LARGA":"DESCANSO",s.round(),s.config.blocksBeforeLong);
+        text(0,0,value);if(paused)text(98,0,"PAUSA");
+    }
+    const auto mood=paused?pet::Mood::Calm:waiting?pet::Mood::Curious:s.phase==Phase::Focus?pet::Mood::Attentive:pet::Mood::Happy;
+    faces_.draw(canvas_,now,mood,humor);
+    const auto& eyes=canvas_;
+    // Reuse the animated eyes, scaled into the left side of the 128x32 screen.
+    for(int y=0;y<14;++y)for(int x=0;x<44;++x)
+        if(eyes.pixel(x*128/44,y*32/14))display_.drawPixel(x+1,y+10,SSD1306_WHITE);
+    const uint32_t seconds=(s.remainingMs+999)/1000;
+    snprintf(value,sizeof(value),"%02lu:%02lu",static_cast<unsigned long>(seconds/60),static_cast<unsigned long>(seconds%60));
+    text(seconds/60>=100?54:60,10,value,2);
+    if(waiting)text(0,24,"App/ajustes: empezar");
+    else{
+        display_.drawFastHLine(0,30,128,SSD1306_WHITE);
+        const unsigned width=s.durationMs?uint64_t(s.durationMs-s.remainingMs)*128/s.durationMs:0;
+        display_.fillRect(0,30,width,2,SSD1306_WHITE);
+    }
+}
+void Screen::studyMenu(const pet::study::Menu& menu,const pet::study::Snapshot& value) {
+    clear();char textValue[28];
+    snprintf(textValue,sizeof(textValue),"ESTUDIO %02u/%02u%s",menu.item+1,menu.count,menu.editing?" *":"");text(0,0,textValue);
+    text(0,8,menu.label(value));menu.value(textValue,sizeof(textValue),value);text(0,16,textValue);
+    text(0,24,menu.editing?"C:cambia L:listo":"C:sig L:elige 3s:sal");
+}
 void Screen::progress(float value) {
     if (value <= 0) return;
     display_.drawFastHLine(0,31,128,SSD1306_BLACK);

@@ -30,9 +30,9 @@ jobs:
       - name: Verify published APK and exclude generated apps and signing keys
         run: |
           test -z "$(git ls-files '*.aab' '*.jks' '*.keystore')"
-          test "$(git ls-files '*.apk')" = 'releases/android/MiniPet-3.0.0-debug.apk'
+          test "$(git ls-files '*.apk')" = "$(printf '%s\n' releases/android/MiniPet-3.0.0-debug.apk releases/android/MiniPet-3.1.0-debug.apk)"
           cd releases/android
-          sha256sum -c MiniPet-3.0.0-debug.apk.sha256
+          sha256sum -c MiniPet-3.0.0-debug.apk.sha256 MiniPet-3.1.0-debug.apk.sha256
   verify:
     runs-on: ubuntu-latest
     steps:
