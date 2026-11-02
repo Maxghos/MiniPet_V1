@@ -5,6 +5,7 @@
 #include "WeatherEffects.h"
 #include "AppProtocol.h"
 #include "StudyTimer.h"
+#include "LittleActivities.h"
 #include <Adafruit_SSD1306.h>
 
 class Screen {
@@ -26,6 +27,8 @@ public:
     void remote(const pet::app::RemoteView& content);
     void study(const pet::study::Snapshot& value,uint32_t now,uint8_t humor);
     void studyMenu(const pet::study::Menu& menu,const pet::study::Snapshot& value);
+    void littleActivity(pet::LittleActivity activity,uint32_t now,uint32_t age,uint8_t humor);
+    void telegramPairing(const char* pin,unsigned seconds);
 private:
     void clear();
     void text(int x, int y, const char* value, unsigned size = 1);

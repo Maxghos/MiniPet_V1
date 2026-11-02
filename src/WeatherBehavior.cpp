@@ -51,17 +51,18 @@ Tick AmbientDirector::interval(const Settings& s, uint32_t random) {
     return value;
 }
 Ambient AmbientDirector::poll(Tick now, const Settings& s, bool allowed, bool attention,
-                               bool fresh, uint32_t random, bool change) {
+                               bool fresh, uint32_t random, bool change,bool scenes) {
     if (!gap_) gap_=interval(s,random);
     if (!allowed || !(s.modules&Assistant) || elapsed(now,last_)<duration_+gap_) return Ambient::None;
     if (change && fresh && s.weatherNotices && s.messages && (s.modules&Weather)) return Ambient::WeatherChange;
-    static constexpr Ambient choices[]={Ambient::Phrase,Ambient::Weather,Ambient::Reminder};
+    static constexpr Ambient choices[]={Ambient::Phrase,Ambient::Weather,Ambient::Reminder,Ambient::Scene};
+    const unsigned count=scenes?4:3;
     Ambient fallback=Ambient::None;
-    for (unsigned i=0;i<3;++i) {
-        Ambient candidate=choices[(random%3+i)%3];
+    for (unsigned i=0;i<count;++i) {
+        Ambient candidate=choices[(random%count+i)%count];
         const bool eligible=(candidate==Ambient::Phrase && s.messages && s.randomPhrases) ||
             (candidate==Ambient::Weather && fresh && s.weatherReactions && (s.modules&Weather)) ||
-            (candidate==Ambient::Reminder && attention && s.messages);
+            (candidate==Ambient::Reminder && attention && s.messages)||(candidate==Ambient::Scene&&scenes);
         if (!eligible) continue;
         if (candidate==previous_) { fallback=candidate; continue; }
         previous_=candidate; return candidate;

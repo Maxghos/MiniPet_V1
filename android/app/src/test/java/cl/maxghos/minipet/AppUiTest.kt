@@ -44,16 +44,18 @@ class AppUiTest {
     @Test fun navigatesAllFivePanelsAndBothSendViewsWithoutADevice(){
         val pictures=mutableSetOf<Int>()
         for((index,pair) in listOf("Conectar" to "Vincula tu compañero","Estudio" to "Estudiemos por bloques",
-            "Enviar" to "Un mensaje para MiniPet","Biblioteca" to "Guardado en el teléfono","Ajustes" to "La personalidad de tu MiniPet").withIndex()){
+            "Día" to "Tu día, con MiniPet","Enviar" to "Un mensaje para MiniPet","Ajustes" to "La personalidad de tu MiniPet").withIndex()){
             compose.onNodeWithText(pair.first,substring=false).performClick()
             compose.onNodeWithText(pair.second).assertExists()
             pictures+=capture("panel-$index")
         }
         assertEquals(5,pictures.size)
         compose.onNodeWithText("Enviar",substring=false).performClick()
-        compose.onNodeWithText("Imagen / GIF / vídeo").performClick()
+        compose.onNodeWithText("Media",substring=false).performClick()
         compose.onNodeWithText("Imágenes y pequeños clips").assertExists()
         capture("send-media")
+        compose.onNodeWithText("Biblioteca",substring=false).performClick()
+        compose.onNodeWithText("Guardado en el teléfono").assertExists()
     }
     @Test fun studyFocusBreakPauseWaitingAndSummaryMatchProtocolState(){
         val model=ViewModelProvider(compose.activity)[MiniPetModel::class.java]
@@ -89,5 +91,23 @@ class AppUiTest {
         compose.onNodeWithText("Pausar").assertIsNotEnabled()
         compose.onNodeWithText("Saltar etapa").assertIsNotEnabled()
         compose.onNodeWithText("Terminar sesión").assertIsNotEnabled()
+    }
+    @Test fun dayViewsUseCppAgendaAndNeverRevealTheBotToken(){
+        val model=ViewModelProvider(compose.activity)[MiniPetModel::class.java]
+        val data=org.json.JSONObject(javaClass.getResourceAsStream("/additional.json")!!.bufferedReader().readText())
+        compose.runOnIdle{model.edit{it.copy(tab=2,connected=true,additionalSupported=true,agenda=data.getJSONObject("agenda").toString(),telegram=data.getJSONObject("telegram").toString(),dayTab=0)}}
+        for((tab,title) in listOf("Actividades" to "Actividades del día","Avisos" to "Crear recordatorio","Resumen" to "Resumen diario","Telegram" to "Telegram personal")){
+            compose.onNodeWithText(tab,substring=false).performClick()
+            compose.onNodeWithText(title,substring=false).assertExists()
+            capture("day-$tab")
+        }
+        compose.onNodeWithText("Guardar token por BLE").assertIsNotEnabled()
+        compose.onNodeWithText("Token de BotFather").assertExists()
+        assertFalse(data.getJSONObject("telegram").has("token"));assertFalse(data.getJSONObject("telegram").has("tokenValue"))
+    }
+    @Test fun backgroundingClearsTheUnsubmittedTelegramToken(){
+        val model=ViewModelProvider(compose.activity)[MiniPetModel::class.java]
+        compose.runOnIdle{model.edit{it.copy(telegramToken="private-input")};model.foreground(false)}
+        assertEquals("",model.state.telegramToken)
     }
 }

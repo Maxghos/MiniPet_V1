@@ -20,6 +20,7 @@ class BleTransport(private val context: Context, private val device: BluetoothDe
         val CCC: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
     override val chunkSize = 120
+    override val secureConfiguration = true
     private var gatt: BluetoothGatt? = null
     private var command: BluetoothGattCharacteristic? = null
     private val ready = CompletableDeferred<Unit>()

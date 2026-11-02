@@ -14,6 +14,7 @@ bool StudyService::begin() {
         }
     }
     const auto now=millis();const auto value=timer_.snapshot(now);
+    accounting_.baseline(value);
     active_=value.active();savedRevision_=value.revision;lastSave_=now;lastAttempt_=now-5000;
     return true;
 }
@@ -29,6 +30,7 @@ void StudyService::poll(pet::study::Snapshot& output) {
     if(!mutex_||xSemaphoreTake(mutex_,pdMS_TO_TICKS(2))!=pdTRUE)return;
     const uint32_t now=millis();
     timer_.update(now);const auto value=timer_.snapshot(now);active_=value.active();
+    accounting_.observe(value);
     const bool dirty=value.revision!=savedRevision_||
         (value.state==pet::study::State::Running&&pet::elapsed(now,lastSave_)>=60000);
     if(dirty&&(persisted_||pet::elapsed(now,lastAttempt_)>=5000))save(now);
@@ -38,15 +40,21 @@ void StudyService::poll(pet::study::Snapshot& output) {
 bool StudyService::read(pet::study::Snapshot& out) {
     if(!mutex_||xSemaphoreTake(mutex_,pdMS_TO_TICKS(2))!=pdTRUE)return false;
     const uint32_t now=millis();
-    timer_.update(now);out=timer_.snapshot(now);active_=out.active();xSemaphoreGive(mutex_);return true;
+    timer_.update(now);out=timer_.snapshot(now);accounting_.observe(out);active_=out.active();xSemaphoreGive(mutex_);return true;
+}
+bool StudyService::totals(pet::agenda::Totals& out){
+    if(!mutex_||xSemaphoreTake(mutex_,pdMS_TO_TICKS(2))!=pdTRUE)return false;
+    out=accounting_.totals();xSemaphoreGive(mutex_);return true;
 }
 void StudyService::execute(JsonVariantConst request,JsonObject reply) {
     if(!mutex_||xSemaphoreTake(mutex_,pdMS_TO_TICKS(2000))!=pdTRUE){
         reply["ok"]=false;reply["error"]="Estudio ocupado. Vuelve a intentar.";return;
     }
     const uint32_t now=millis();const auto before=timer_.snapshot(now).revision;
+    timer_.update(now);accounting_.observe(timer_.snapshot(now));
     pet::study::command(timer_,request,reply,now);
     const auto value=timer_.snapshot(now);active_=value.active();
+    accounting_.observe(value);
     if(value.revision!=before||(value.revision!=savedRevision_&&pet::elapsed(now,lastAttempt_)>=5000))save(now);
     reply["study"]["persisted"]=persisted_;
     xSemaphoreGive(mutex_);

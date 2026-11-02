@@ -33,6 +33,16 @@ Las demás órdenes requieren `Authorization: Bearer CREDENCIAL` en HTTP o el ca
 | `upload.chunk` | `id`, `offset`, `data` Base64; el offset debe coincidir; responde próximo offset |
 | `upload.commit` | `id`; requiere longitud completa, cabecera y CRC válidos, luego renombra el archivo temporal |
 | `upload.cancel` | Descarta la carga parcial sin borrar el archivo previo |
+| `agenda.get` | Fecha/minuto de Santiago, opciones, actividades, recordatorios y estadísticas de 14 días |
+| `agenda.options` | `dailySummary`, `summaryMinute` (0–1439), `scenes`; opciones independientes de los ajustes V2 |
+| `task.add` | `title` (1–96 bytes sin controles), `day` opcional AAAAMMDD; hasta 24 actividades |
+| `task.done`, `task.today`, `task.delete` | `id` estable; `done` booleano para marcar/desmarcar; pasar a hoy o eliminar |
+| `reminder.add` | `title`, `minute`, `daily` booleano, `day` opcional; hasta 12; sin fecha usa próxima llegada de la hora |
+| `reminder.delete` | Elimina el recordatorio por `id` |
+| `telegram.get` | Estado público y flags; nunca token, PIN ni IDs de cuenta |
+| `telegram.configure` | `tokenValue`; exclusivamente desde la ruta BLE cifrada y con la credencial de app |
+| `telegram.settings` | `enabled`, `studyAlerts`, `reminderAlerts`, `summaryAlerts`; booleanos |
+| `telegram.clear` | Borra token/vinculación de NVS y descarta la cola del bot |
 
 `id` acepta únicamente 1–24 caracteres ASCII alfanuméricos, `_` y `-`. No se aceptan rutas. La app usa bloques binarios de 3.072 bytes en Wi-Fi y 120 en BLE. Hay una sola carga pendiente y se exige actividad al menos cada dos minutos. Las imágenes/vídeos no se muestran hasta ejecutar `play`.
 
@@ -50,6 +60,20 @@ La app adjunta `expectedRevision` a cada orden que modifica estudio. Si el estad
 Las órdenes pasan por un mutex del servicio de estudio, compartido con controles locales. El instante monotónico se toma **después de adquirirlo** para evitar retroceder entre tareas. El temporizador se guarda separadamente en `minipet-study`, registro JSON versión 1, al cambiar/controlar etapas y cada minuto en marcha; al reiniciar se recupera pausado o esperando confirmación. No usa la hora de internet ni depende de la sesión de reproducción de 15 s.
 
 Mientras estudio esté activo, se rechazan `text`/`play`; se permite guardar archivos. El menú físico conserva prioridad: bloquea iniciar, reanudar, configurar o saltar desde la app. Pausar y terminar siguen disponibles. El mando `stop` de media no equivale a `study.stop`.
+
+## Agenda y Telegram (firmware 3.2)
+
+`status` incluye `additional: true` para detectar estas capacidades. Las órdenes de agenda devuelven `agenda` con `clockReady`, `day` AAAAMMDD, `minute`, `revision`, `options`, `tasks`, `reminders`, `days`, `summary` y `persisted`. Los ID de actividades/avisos se guardan y no se reutilizan al reiniciar. Se reutiliza una actividad con igual título/fecha o una programación activa idéntica para reducir duplicados por reintentos.
+
+La agenda ocupa `/agenda.json` en LittleFS, registro JSON versión 1. Se escribe primero `/agenda.tmp`, se verifica la longitud y se renombra de forma atómica. Las estadísticas toman diferencias de contadores acumulativos del servicio de estudio, incluyendo órdenes desde app, menú o bot; una sesión nueva no reinicia los contadores diarios. Son 24 actividades, 12 avisos y 14 registros de día. Las operaciones con fecha necesitan hora local de Santiago válida.
+
+El token del bot se recibe como `tokenValue`, distinto del `token` de autorización de la app. La ruta HTTP nunca activa `secureBle`: esa marca es interna y solo la establece el trabajador de la característica BLE cifrada. Además, Android comprueba la capacidad del transporte antes de enviar el secreto. `telegram.get` tiene una lista fija de campos públicos; la credencial no se devuelve ni se incorpora a binarios o fixtures.
+
+La ventana de Vincular Telegram se abre físicamente, dura dos minutos y permite cinco fallos. Se liga `chat.id` y `from.id` de un usuario privado; se rechazan grupos, bots y mensajes reenviados. Las credenciales y flags se guardan juntos en NVS `minipet-tg`. `getUpdates` usa una lista de tipos permitidos, lotes acotados y long polling de diez segundos. Al reconectar se drena el último update y se descarta la cola anterior antes de aceptar nuevas órdenes. Los mensajes de texto deben ser recientes; los teclados llevan la revisión de Pomodoro para impedir actuar sobre una etapa antigua.
+
+Las peticiones del bot tienen destino fijo `api.telegram.org`, validación TLS, redirecciones desactivadas, límites de respuesta/profundidad JSON y esperas acotadas. Las conexiones TLS del bot y clima comparten un mutex en sus tareas de red; nunca se espera una petición HTTPS en el bucle de dibujo. La fuente/verificación de CA se documenta en [certs/README.md](../certs/README.md).
+
+La cola automática del bot tiene hasta 16 avisos y tres intentos por aviso. Vencimientos: estudio 2 min, recordatorios 15 min, resumen 1 h. Los avisos OLED tienen cola de ocho entradas y respetan las pantallas prioritarias; No molestar suprime la creación y envío automáticos. Configurar otro token, borrar la vinculación o cambiar activación descarta la cola del bot. No se garantiza entrega exactamente una vez ante fallos de red/alimentación.
 
 ## Archivo MPET
 
@@ -77,10 +101,10 @@ La biblioteca usa LittleFS en la partición `spiffs` existente, hasta ocho archi
 
 ## Fixtures compartidos
 
-`protocol/fixtures/frame_clip.mpet`, `text_layout.json` y `study_cycle.json` se generan mediante `tools/export_app_fixtures.cpp`. Las pruebas nativas verifican que los fixtures no cambian, y los tests Kotlin los usan para comprobar la codificación de media, páginas de texto y estados de un ciclo Pomodoro real del C++. Para regenerarlos después de cambiar deliberadamente el protocolo:
+`protocol/fixtures/frame_clip.mpet`, `text_layout.json`, `study_cycle.json` y `additional.json` se generan mediante `tools/export_app_fixtures.cpp`. Las pruebas nativas verifican que los fixtures no cambian, y los tests Kotlin los usan para comprobar media, páginas de texto, ciclo Pomodoro y agenda/estado público de Telegram del C++. Para regenerarlos después de cambiar deliberadamente el protocolo:
 
 ```sh
-g++ -std=c++17 -Iinclude -I.pio/libdeps/esp32s3/ArduinoJson/src src/AppProtocol.cpp src/TextLayout.cpp src/StudyTimer.cpp src/StudyCodec.cpp tools/export_app_fixtures.cpp -o build/export_app_fixtures
+g++ -std=c++17 -Iinclude -I.pio/libdeps/esp32s3/ArduinoJson/src src/AppProtocol.cpp src/TextLayout.cpp src/StudyTimer.cpp src/StudyCodec.cpp src/Agenda.cpp src/TelegramProtocol.cpp tools/export_app_fixtures.cpp -o build/export_app_fixtures
 ./build/export_app_fixtures
 ```
 

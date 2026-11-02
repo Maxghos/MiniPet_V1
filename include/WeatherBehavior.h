@@ -25,12 +25,12 @@ private:
     Condition condition_ = Condition::Unknown;
 };
 
-enum class Ambient : uint8_t { None, Phrase, Weather, Reminder, WeatherChange };
+enum class Ambient : uint8_t { None, Phrase, Weather, Reminder, WeatherChange, Scene };
 class AmbientDirector {
 public:
     void begin(Tick now) { last_=now; }
     Ambient poll(Tick now, const Settings& s, bool allowed, bool attentionDue,
-                 bool freshWeather, uint32_t random, bool weatherChange);
+                 bool freshWeather, uint32_t random, bool weatherChange,bool scenes=false);
     void note(Tick now, Tick duration, const Settings& s, uint32_t random, bool autonomous=true);
     static Tick interval(const Settings& s, uint32_t random);
 private:

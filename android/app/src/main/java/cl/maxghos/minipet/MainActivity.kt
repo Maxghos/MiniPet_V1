@@ -50,8 +50,8 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
     LaunchedEffect(state.tab,state.sendTab,state.study?.active){scroll.scrollTo(0)}
     MaterialTheme(colorScheme=Colors){
         Scaffold(topBar={TopAppBar(title={Column{Text("MiniPet",fontWeight=FontWeight.Bold);Text(if(state.connected)state.connectionName else "Tu compañero, a tu manera",style=MaterialTheme.typography.labelMedium)}})},
-            bottomBar={NavigationBar{listOf("Conectar","Estudio","Enviar","Biblioteca","Ajustes").forEachIndexed{i,title->
-                NavigationBarItem(selected=state.tab==i,onClick={model.edit{it.copy(tab=i)}},icon={Text(listOf("◎","◷","Aa","▤","⚙")[i])},label={Text(title)})
+            bottomBar={NavigationBar{listOf("Conectar","Estudio","Día","Enviar","Ajustes").forEachIndexed{i,title->
+                NavigationBarItem(selected=state.tab==i,onClick={model.edit{it.copy(tab=i)}},icon={Text(listOf("◎","◷","☑","Aa","⚙")[i])},label={Text(title)})
             }}}){padding->
             Column(Modifier.fillMaxSize().padding(padding).verticalScroll(scroll).padding(18.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
                 if(state.notice.isNotBlank())Card(colors=CardDefaults.cardColors(containerColor=if(state.error)MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant)){
@@ -62,7 +62,7 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
                     TextButton(onClick={model.cancel()}){Text("Cancelar operación")}
                 }
                 if(state.tab!=1&&state.study?.active==true)StudyShortcut(model)
-                when(state.tab){0->ConnectionPanel(model);1->StudyPanel(model);2->SendPanel(model);3->LibraryPanel(model);4->SettingsPanel(model)}
+                when(state.tab){0->ConnectionPanel(model);1->StudyPanel(model);2->DayPanel(model);3->SendPanel(model);4->SettingsPanel(model)}
                 Spacer(Modifier.height(12.dp))
             }
         }
@@ -134,12 +134,12 @@ private val Colors=darkColorScheme(primary=Mint,onPrimary=Color(0xff123727),seco
 @Composable private fun SendPanel(model: MiniPetModel){
     val s=model.state
     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()){
-        listOf("Texto","Imagen / GIF / vídeo").forEachIndexed{i,label->
-            SegmentedButton(selected=s.sendTab==i,onClick={model.edit{it.copy(sendTab=i)}},shape=SegmentedButtonDefaults.itemShape(i,2)){Text(label)}
+        listOf("Texto","Media","Biblioteca").forEachIndexed{i,label->
+            SegmentedButton(selected=s.sendTab==i,onClick={model.edit{it.copy(sendTab=i)}},shape=SegmentedButtonDefaults.itemShape(i,3)){Text(label)}
         }
     }
     if(s.study?.active==true)Text("MiniPet está en modo estudio. Puedes preparar o guardar archivos; termina la sesión para mostrarlos.")
-    if(s.sendTab==0)TextPanel(model) else MediaPanel(model)
+    when(s.sendTab){0->TextPanel(model);1->MediaPanel(model);else->LibraryPanel(model)}
 }
 @Composable private fun rememberLauncherForPermissions(onGranted:()->Unit): (Array<String>)->Unit {
     val launcher=androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){result->if(result.values.all{it})onGranted()}

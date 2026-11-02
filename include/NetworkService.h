@@ -22,7 +22,7 @@ public:
 private:
     static void taskEntry(void* ctx);
     void run();
-    void fetchWeather();
+    bool fetchWeather();
     void submitWifi();
     SemaphoreHandle_t mutex_ = nullptr;
     TaskHandle_t task_ = nullptr;

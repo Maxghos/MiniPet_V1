@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 interface CommandTransport : Closeable {
     val chunkSize: Int
+    val secureConfiguration: Boolean get()=false
     suspend fun exchange(command: JSONObject): JSONObject
 }
 class DeviceFailure(message: String): Exception(message)

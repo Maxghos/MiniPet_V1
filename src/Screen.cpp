@@ -38,6 +38,14 @@ void Screen::remote(const pet::app::RemoteView& content) {
     display_.setCursor(x,12);
     for(unsigned char c:scrollText_)display_.write(c=='\n' ? ' ' : c);
 }
+void Screen::littleActivity(pet::LittleActivity activity,uint32_t now,uint32_t age,uint8_t humor){
+    pet::drawLittleActivity(faces_,canvas_,activity,now,age,humor);memcpy(display_.getBuffer(),canvas_.bytes.data(),512);
+}
+void Screen::telegramPairing(const char* pin,unsigned seconds){
+    clear();char value[28];snprintf(value,sizeof(value),"TELEGRAM PIN %s",pin);text(0,0,value);
+    text(0,8,"Envia a tu bot:");snprintf(value,sizeof(value),"/vincular %s",pin);text(0,16,value);
+    snprintf(value,sizeof(value),"%us  Boton:cancelar",seconds);text(0,24,value);
+}
 void Screen::study(const pet::study::Snapshot& s,uint32_t now,uint8_t humor) {
     using namespace pet::study;
     if(s.eventAgeMs<6500){

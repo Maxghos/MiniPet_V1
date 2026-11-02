@@ -1,4 +1,5 @@
 #include "NetworkService.h"
+#include "NetworkGuard.h"
 #include "WeatherCodec.h"
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -68,25 +69,22 @@ void NetworkService::run() {
         }
         // Authenticate HTTPS only after a plausible SNTP/system time is available.
         if (online && time(nullptr) > 1704067200 && uint32_t(now-lastFetch) >= 1800000) {
-            fetchWeather(); lastFetch = now;
-            // Retry failures after 60 s, retain last good data.
-            if (xSemaphoreTake(mutex_,pdMS_TO_TICKS(20)) == pdTRUE) {
-                if (!weather_.valid || uint32_t(now-weather_.fetchedMs) > 1800000) lastFetch = now-1740000;
-                xSemaphoreGive(mutex_);
-            }
+            const bool fetched=fetchWeather();lastFetch=fetched?now:now-1740000;
         }
         previousConnected = online;
         vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
-void NetworkService::fetchWeather() {
+bool NetworkService::fetchWeather() {
+    NetworkGuard lock;if(!lock)return false;
     WiFiClientSecure client;
     client.setCACert(weatherRoot);
     client.setHandshakeTimeout(8);
     HTTPClient http;
     http.setConnectTimeout(5000); http.setTimeout(6000);
     http.useHTTP10(true); // avoid chunked stream parsing on this Arduino core
-    if (!http.begin(client,forecastUrl)) return;
+    if (!http.begin(client,forecastUrl)) return false;
+    bool accepted=false;
     int status = http.GET();
     if (status == HTTP_CODE_OK && (http.getSize() < 0 || http.getSize() <= 16384)) {
         JsonDocument doc;
@@ -94,7 +92,6 @@ void NetworkService::fetchWeather() {
         WeatherData parsed;
         if (!error && decodeWeather(doc,parsed)) {
             parsed.fetchedMs = millis(); parsed.fetchedEpoch = time(nullptr);
-            bool accepted=false;
             if (xSemaphoreTake(mutex_,pdMS_TO_TICKS(20)) == pdTRUE) {
                 if (!weather_.valid || parsed.observedEpoch>=weather_.observedEpoch) {
                     parsed.revision=weather_.revision+1;
@@ -107,6 +104,7 @@ void NetworkService::fetchWeather() {
         } else Serial.println("Respuesta de clima invalida; se conserva la anterior");
     } else Serial.printf("Clima: HTTP %d; se conserva la ultima lectura\n",status);
     http.end();
+    return accepted;
 }
 void NetworkService::startPortal(bool forApp) {
     appPortal_=forApp;

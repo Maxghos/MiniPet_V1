@@ -1,0 +1,56 @@
+{
+  "agenda": {
+    "clockReady": true,
+    "day": 20261102,
+    "minute": 600,
+    "revision": 2,
+    "options": {
+      "dailySummary": true,
+      "summaryMinute": 1230,
+      "scenes": true
+    },
+    "tasks": [
+      {
+        "id": 1,
+        "day": 20261102,
+        "title": "Repasar algebra",
+        "done": false,
+        "doneDay": 0
+      }
+    ],
+    "reminders": [
+      {
+        "id": 2,
+        "day": 20261102,
+        "minute": 620,
+        "title": "Descansar la vista",
+        "daily": true,
+        "enabled": true,
+        "lastDay": 0
+      }
+    ],
+    "days": [
+      {
+        "day": 20261102,
+        "focusMs": 1500000,
+        "breakMs": 300000,
+        "blocks": 1,
+        "tasks": 0
+      }
+    ],
+    "summary": "Resumen 02/11\nEstudio: 25 min\nDescanso: 5 min\nBloques: 1\nActividades completadas: 0\nPendientes: 1",
+    "persisted": true
+  },
+  "telegram": {
+    "configured": true,
+    "linked": true,
+    "enabled": true,
+    "ready": true,
+    "pairing": false,
+    "username": "MiniPetDemoBot",
+    "code": 200,
+    "studyAlerts": true,
+    "reminderAlerts": true,
+    "summaryAlerts": true
+  }
+}

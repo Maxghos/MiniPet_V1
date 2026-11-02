@@ -1,6 +1,8 @@
 #include "AppProtocol.h"
 #include "TextLayout.h"
 #include "StudyCodec.h"
+#include "Agenda.h"
+#include "TelegramProtocol.h"
 #include <ArduinoJson.h>
 #include <fstream>
 #include <sstream>
@@ -47,7 +49,17 @@ int main(int argc,char** argv){
     timer.resume(200000);timer.update(250000);capture(250000);timer.stop(251000);capture(251000);
     std::string studyJson;serializeJsonPretty(study,studyJson);
     studyJson.erase(std::remove(studyJson.begin(),studyJson.end(),'\r'),studyJson.end());studyJson+='\n';
+    pet::agenda::Book book;pet::agenda::Moment moment{20261102,600,1793613600};JsonDocument req,response,additional;
+    req["op"]="task.add";req["title"]="Repasar algebra";book.command(req.as<JsonVariantConst>(),response.to<JsonObject>(),moment);
+    req.clear();req["op"]="reminder.add";req["title"]="Descansar la vista";req["minute"]=620;req["daily"]=true;
+    book.command(req.as<JsonVariantConst>(),response.to<JsonObject>(),moment);
+    book.observe({1500000,300000,1},moment);book.view(additional["agenda"].to<JsonObject>(),moment);
+    additional["agenda"]["persisted"]=true;
+    pet::telegram::PublicState tg;tg.configured=tg.linked=tg.ready=true;tg.username="MiniPetDemoBot";tg.code=200;
+    pet::telegram::publicState(additional["telegram"].to<JsonObject>(),tg);
+    std::string additionalJson;serializeJsonPretty(additional,additionalJson);
+    additionalJson.erase(std::remove(additionalJson.begin(),additionalJson.end(),'\r'),additionalJson.end());additionalJson+='\n';
     if(!save("text_layout.json",json,check)||!save("frame_clip.mpet",std::string(reinterpret_cast<char*>(media.data()),media.size()),check)||
-        !save("study_cycle.json",studyJson,check))return 1;
+        !save("study_cycle.json",studyJson,check)||!save("additional.json",additionalJson,check))return 1;
     std::cout<<"App protocol fixtures "<<(check?"verified":"generated")<<"\n";
 }

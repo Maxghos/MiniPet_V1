@@ -1,14 +1,14 @@
-# MiniPet 3.1: app Android, estudio e instalación
+# MiniPet 3.2: app Android, agenda, Telegram y estudio
 
 ## 1. Actualizar MiniPet
 
-Descarga el proyecto completo actualizado, abre su raíz en VS Code/PlatformIO y ejecuta **esp32s3 → General → Build**, después **Upload**. Para un pulsador mecánico usa `esp32s3-button`. El saludo dice **MiniPet V3.1.1**; el menú incluye **Vincular app** y **Modo estudio**. Esta revisión mejora los sensores y conserva la APK 3.1.0.
+Descarga el proyecto completo actualizado, abre su raíz en VS Code/PlatformIO y ejecuta **esp32s3 → General → Build**, después **Upload**. Para un pulsador mecánico usa `esp32s3-button`. El saludo dice **MiniPet V3.2**; el menú incluye **Vincular app**, **Modo estudio** y **Vincular Telegram**. Conserva los ajustes de sensores de 3.1.1.
 
 El cableado es el mismo. La configuración y el Wi-Fi de V1/V2 se conservan. No necesitas borrar la flash. En el primer arranque se inicializa la partición de archivos que las versiones anteriores de MiniPet no utilizaban; allí se guarda la nueva biblioteca, separada de los ajustes NVS.
 
 ## 2. Instalar la APK
 
-**[Descarga la APK MiniPet 3.1.0](../releases/android/MiniPet-3.1.0-debug.apk?raw=true)** y ábrela en tu teléfono Android 8.0 o superior. Autoriza la instalación desde tu navegador/gestor de archivos si Android lo solicita. No necesitas Android Studio ni Expo. Puedes instalarla sobre la APK 3.0.0 publicada: mantiene paquete y firma. Esta APK es una compilación de prueba firmada, disponible en el repositorio; no se publica en una tienda. Su SHA-256 está en la misma carpeta `releases/android`.
+**[Descarga la APK MiniPet 3.2.0](../releases/android/MiniPet-3.2.0-debug.apk?raw=true)** y ábrela en tu teléfono Android 8.0 o superior. Autoriza la instalación desde tu navegador/gestor de archivos si Android lo solicita. No necesitas Android Studio ni Expo. Puedes instalarla sobre las APK anteriores publicadas: mantiene paquete y firma. Esta APK es una compilación de prueba firmada, disponible en el repositorio; no se publica en una tienda. Su SHA-256 está en la misma carpeta `releases/android`.
 
 ## 3. Vincular por Wi-Fi (recomendado)
 
@@ -38,11 +38,12 @@ Wi-Fi es más rápido para clips. BLE permite las mismas órdenes y transferenci
 ## 5. Mostrar o guardar
 
 - **Estudio:** concentración y descansos, programas personalizados, pausa/reanudación y resumen; sigue sin conexión. [Guía completa de Pomodoro](ESTUDIO.md).
+- **Día:** actividades, recordatorios, resumen diario y configuración de Telegram. [Guía de funciones adicionales y BotFather](FUNCIONES_ADICIONALES.md).
 - **Enviar → Texto:** escribe el mensaje; elige páginas centradas o desplazamiento y revisa la vista previa. «Mostrar mensaje» lo presenta completo; puedes fijarlo mientras la app siga comunicándose.
 - **Enviar → Imagen / GIF / vídeo:** elige el archivo. Ajusta encuadre, zoom, giro, contraste y tramado. Pulsa **Preparar vista previa** después de cambiar valores; solo se envía el resultado preparado.
 - **Mostrar ahora:** transfiere y reproduce el contenido.
 - **Guardar en MiniPet sin mostrar:** transfiere a la biblioteca sin interrumpir la mascota. El teléfono conserva una copia convertida para reenviarla.
-- **Biblioteca:** permite volver a mostrar o eliminar archivos de cada dispositivo por separado.
+- **Enviar → Biblioteca:** permite volver a mostrar o eliminar archivos de cada dispositivo por separado.
 - **Volver a MiniPet:** detiene el contenido externo. El botón físico también puede interrumpirlo para abrir ajustes.
 
 Mientras hay contenido externo se mantienen las lecturas de sensores, pero se pausan sus consultas visuales y las iniciativas para no taparlo. El menú físico tiene prioridad: ciérralo antes de mostrar contenido o aplicar ajustes desde la app. Guardar archivos y conectarse no generan atención artificial.

@@ -1,5 +1,32 @@
 # Validación de esta versión
 
+## V3.2: Funciones adicionales
+
+Comprobaciones locales del **2 de noviembre de 2026**, fecha de Santiago. No se ha configurado un token personal ni se han enviado mensajes a Telegram durante el desarrollo.
+
+| Comprobación | Resultado |
+|---|---|
+| C++ con AddressSanitizer/UndefinedBehaviorSanitizer | 39 suites, 8.084 comprobaciones correctas |
+| Controlador de sensores real con GPIO/reloj simulados | Cinco suites, 388 comprobaciones correctas |
+| Agenda | Crear, completar/desmarcar sin sumar dos veces, pasar a hoy, eliminar, límites, fechas válidas y persistencia/corrupción |
+| Recordatorios/resumen | Avisos puntuales/diarios, siguiente día, años bisiestos, No molestar, descarte de atrasos y una emisión por día |
+| Estadísticas | Acumulación entre sesiones, separación de estudio/descanso, cambio de fecha y recuperación de registros |
+| Telegram, núcleo portable | PIN, cinco intentos, caducidad, usuario privado autorizado, grupos/reenviados/otras cuentas rechazados, IDs repetidos y comandos permitidos |
+| Botones de Telegram | Datos con revisión; confirmación antes de saltar/terminar; rechazo de parámetros fuera de rango |
+| Privacidad | Estado público sin token/PIN/IDs; cliente Android impide enviar token por HTTP y limpia la entrada al pasar al fondo |
+| Microescenas | Cuatro actividades con cuadros distintos y dibujo acotado a 128×32; lectura sin triángulo de alerta; presupuesto de humor respetado |
+| Android | 29 pruebas JUnit/Robolectric/Compose, ninguna omitida; Lint sin incidencias |
+| Contrato de datos | `additional.json` generado por C++ y consumido por Kotlin; actividades, avisos, resumen y estado público del bot |
+| UI | Navegación de las cinco pestañas, Texto/Media/Biblioteca y cuatro vistas de Día renderizadas y revisadas |
+| Firmware N16R8, TTP223 y pulsador | Ambas compilaciones correctas; aproximadamente 1,43 MB de flash y 59,3 kB de RAM estática |
+| APK 3.2.0 | Código de versión 5, firma y alineación verificadas; mismo certificado de las APK anteriores publicadas |
+| Confianza HTTPS | Bundle de 121 CA públicas, generado desde wheel oficial de certifi con huellas fijadas; estructura/huella comprobadas sin usar las CA privadas del entorno |
+| Regresiones | 8.760 comparaciones de Santiago, 100 frases, protocolo de reproducción y ciclo Pomodoro correctos |
+
+**Pendiente con tus dispositivos y bot:** handshake TLS real a Telegram, entrega de avisos, operación de getUpdates/teclados con la API real, almacenamiento LittleFS/NVS tras cortes, Bluetooth/Wi-Fi y convivencia prolongada de red/sensores/pantalla. Las pruebas de autenticación y comandos son locales con datos sintéticos; no se presentan como una conversación real con Telegram. No hay un ESP32 ni teléfono USB conectados al entorno. Seguir [FUNCIONES_ADICIONALES.md](FUNCIONES_ADICIONALES.md).
+
+La fuente de las CA se obtiene de un wheel de PyPI verificado, no del almacén de certificados del host. El diseño serializa las conexiones TLS de clima y bot en tareas de red, pero el consumo dinámico de RAM y la cadencia percibida requieren medición en la placa. Las estadísticas se recogen aproximadamente cada segundo y se guardan por intervalos de hasta un minuto; no tienen precisión de auditoría ni miden atención. Los resultados de CI posteriores al push son independientes de estas pruebas locales.
+
 ## V3.1.1: mantenimiento de sensores y optimizaciones
 
 | Comprobación | Resultado |

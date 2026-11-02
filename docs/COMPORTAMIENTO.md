@@ -11,6 +11,8 @@
 
 El modo estudio se inicia explícitamente desde la app o **Ajustes → Modo estudio**. Pausar no lo cierra. No depende de la conexión ni de NTP; los avisos son visuales y no utilizan destellos. Para recuperar las funciones habituales, termina la sesión. Véase [ESTUDIO.md](ESTUDIO.md).
 
+Los recordatorios de agenda se muestran cuando MiniPet queda libre; funcionan también con el módulo asistente deshabilitado, y respetan No molestar. No interrumpen estudio ni un gesto en curso. Las cuatro pequeñas actividades espontáneas comparten el presupuesto de intervenciones, necesitan el asistente despierto y se pueden desactivar desde Día → Resumen. Los detalles, límites y Telegram están en [FUNCIONES_ADICIONALES.md](FUNCIONES_ADICIONALES.md).
+
 La conexión de la app, los mensajes de sesión y guardar archivos no cuentan como atención ni cambian la pantalla. Mostrar contenido/aplicar ajustes sí es una interacción. Al terminar, detener o perder la sesión durante ~15 s, MiniPet recupera su pantalla habitual y respeta una pausa antes de nuevas iniciativas. El menú físico interrumpe el contenido externo. La reproducción fijada que expiró no reaparece al reconectar. Ver [APP_ANDROID.md](APP_ANDROID.md).
 
 Con asistente habilitado, los ojos son la pantalla habitual. Si se habilitan solo clima y reloj, se alternan automáticamente. Un único módulo permanece en su vista. Las funciones deshabilitadas no aparecen en las consultas, ni siquiera por humor alto. Si solo está habilitado el asistente, el gesto se interpreta como interacción y despierta una reacción de curiosidad/contento.
@@ -74,6 +76,7 @@ El texto es «El clima ahora indica lluvia»: representa la estimación de Open-
 | Destello tormenta | Desactivado; inversión breve opcional de hasta ~66 ms |
 | Modo estudio | Submenú de tiempos, automatización y controles; 25/5/15 min y descanso largo cada cuatro bloques |
 | Vincular app | Muestra PIN temporal; Wi-Fi local o BLE; sin router abre la red de MiniPet |
+| Vincular Telegram | PIN físico temporal; requiere bot configurado por BLE e internet; solo admite un usuario privado |
 | Configurar WiFi | Abre una red temporal protegida durante un máximo de 5 min |
 | Restablecer | Prepara los valores iniciales; requiere Guardar y salir; conserva Wi-Fi |
 | Guardar y salir | Guarda la configuración en NVS |

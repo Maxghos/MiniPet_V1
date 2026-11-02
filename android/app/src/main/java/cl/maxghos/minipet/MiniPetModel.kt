@@ -30,7 +30,11 @@ data class AppState(
     val settings: String="{}",val text: String="Hola, MiniPet",val scroll: Boolean=false,
     val speed: Int=25,val duration: Int=10,val fixed: Boolean=false,val loop: Boolean=true,
     val study: StudyStatus?=null,val studySupported: Boolean=false,
-    val studyDraft: StudyDraft=StudyDraft(),val studyDirty: Boolean=false
+    val studyDraft: StudyDraft=StudyDraft(),val studyDirty: Boolean=false,
+    val additionalSupported: Boolean=false,val dayTab: Int=0,val agenda: String="{}",val telegram: String="{}",
+    val taskTitle: String="",val taskDay: String="",val reminderTitle: String="",val reminderDay: String="",
+    val reminderTime: String="18:00",val reminderDaily: Boolean=false,val telegramToken: String="",
+    val summaryTime: String="20:30",val dailySummary: Boolean=true,val scenes: Boolean=true,val dayOptionsDirty: Boolean=false
 )
 class MiniPetModel(application: Application): AndroidViewModel(application) {
     var state by mutableStateOf(AppState());private set
@@ -45,6 +49,7 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
     private var foreground=true
     private var discovery: WifiDiscovery?=null
     private var bleScan: ScanCallback?=null
+    private var lastDaySync=0L
     init{state=state.copy(address=vault.address,local=library.list())}
     fun edit(change: (AppState)->AppState){state=change(state)}
     private fun announce(message: String,error: Boolean=false){state=state.copy(notice=message,error=error)}
@@ -62,6 +67,7 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
     fun cancel(){job?.cancel()}
     fun foreground(value: Boolean){
         foreground=value
+        if(!value)state=state.copy(telegramToken="")
         if(value&&state.connected&&state.studySupported)viewModelScope.launch{runCatching{refreshStudy()}}
     }
     private fun linked(): DeviceClient=client ?: throw DeviceFailure("Conecta MiniPet primero")
@@ -83,13 +89,17 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
             if(!selected.bluetooth)vault.address=endpoint
             state=state.copy(connected=true,connectionName=if(selected.bluetooth)"Bluetooth BLE" else endpoint,
                 settings=response.getJSONObject("settings").toString(),pin="",bluetooth=selected.bluetooth,
-                studySupported=response.has("study"),study=null,studyDirty=false)
+                studySupported=response.has("study"),study=null,studyDirty=false,
+                additionalSupported=response.optBoolean("additional"),agenda="{}",telegram="{}",dayOptionsDirty=false,telegramToken="")
             response.optJSONObject("study")?.let{acceptStudy(StudyStatus.parse(it,SystemClock.elapsedRealtime()))}
             heartbeat=viewModelScope.launch {
                 while(isActive){
                     delay(if(state.studySupported)2000 else 5000)
                     if(foreground)try{
                         if(state.studySupported)refreshStudy() else candidate.call("ping")
+                        if(state.additionalSupported&&state.tab==2&&!state.busy&&SystemClock.elapsedRealtime()-lastDaySync>=15000){
+                            try{refreshAdditional()}catch(error:CancellationException){throw error}catch(_:Exception){announce("La agenda no pudo sincronizarse. Puedes reintentar sin detener el estudio.",true)}
+                        }
                     }catch(error:CancellationException){throw error}
                     catch(_:Exception){
                         if(client===candidate){client=null;candidate.close();state=state.copy(connected=false);announce("Conexión perdida. MiniPet continúa por su cuenta.",true)}
@@ -147,7 +157,7 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
     fun stop()=work("Volviendo a la mascota…"){linked().call("stop");announce("MiniPet recuperó su pantalla habitual")}
     fun choose(uri: Uri)=work("Abriendo archivo…"){
         val source=importer.inspect(uri)
-        state=state.copy(source=source,start=0f,seconds=minOf(5f,source.seconds.coerceAtLeast(1f)),prepared=null,tab=2,sendTab=1)
+        state=state.copy(source=source,start=0f,seconds=minOf(5f,source.seconds.coerceAtLeast(1f)),prepared=null,tab=3,sendTab=1)
         prepareNow()
     }
     fun prepare()=work("Adaptando a 128 × 32…"){prepareNow()}
@@ -179,7 +189,7 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
         transfer(asset.id,asset.title,data,show)
     }
     fun previewSaved(asset: LocalAsset)=work("Abriendo ${asset.title}…"){
-        state=state.copy(prepared=withContext(Dispatchers.IO){library.read(asset.id)},preparedId=asset.id,source=null,tab=2,sendTab=1)
+        state=state.copy(prepared=withContext(Dispatchers.IO){library.read(asset.id)},preparedId=asset.id,source=null,tab=3,sendTab=1)
         announce("Vista previa de ${asset.title}")
     }
     fun deleteLocal(id: String)=work("Eliminando del teléfono…"){
@@ -202,6 +212,65 @@ class MiniPetModel(application: Application): AndroidViewModel(application) {
     fun saveSettings()=work("Aplicando ajustes…"){
         linked().call("settings.set",JSONObject().put("settings",JSONObject(state.settings)))
         delay(150);state=state.copy(settings=linked().call("settings.get").getJSONObject("settings").toString());announce("Ajustes enviados y sincronizados")
+    }
+    private fun acceptAdditional(reply: JSONObject){
+        reply.optJSONObject("agenda")?.let{agenda->
+            val options=agenda.getJSONObject("options")
+            state=state.copy(agenda=agenda.toString(),
+                summaryTime=if(state.dayOptionsDirty)state.summaryTime else clockMinute(options.optInt("summaryMinute",1230)),
+                dailySummary=if(state.dayOptionsDirty)state.dailySummary else options.optBoolean("dailySummary",true),
+                scenes=if(state.dayOptionsDirty)state.scenes else options.optBoolean("scenes",true))
+        }
+        reply.optJSONObject("telegram")?.let{state=state.copy(telegram=it.toString())}
+    }
+    private suspend fun refreshAdditional(){
+        lastDaySync=SystemClock.elapsedRealtime()
+        val current=linked()
+        val agenda=current.call("agenda.get");if(client!==current)return;acceptAdditional(agenda)
+        val telegram=current.call("telegram.get");if(client!==current)return;acceptAdditional(telegram)
+        lastDaySync=SystemClock.elapsedRealtime()
+    }
+    fun loadDay()=work("Sincronizando agenda y Telegram…"){
+        require(state.additionalSupported){"Actualiza el firmware a MiniPet 3.2"};refreshAdditional();announce("Agenda sincronizada")
+    }
+    fun dayCommand(op: String,fields: JSONObject=JSONObject())=work("Actualizando agenda…"){
+        try{
+            val reply=linked().call(op,fields);acceptAdditional(reply)
+            if(op=="task.add")state=state.copy(taskTitle="")
+            if(op=="reminder.add")state=state.copy(reminderTitle="")
+            announce(if(reply.optJSONObject("agenda")?.optBoolean("persisted",true)==false)"Cambio aplicado, pero no pudo guardarse tras un reinicio." else "Agenda actualizada",reply.optJSONObject("agenda")?.optBoolean("persisted",true)==false)
+        }catch(error:Exception){withContext(NonCancellable){runCatching{refreshAdditional()}};throw error}
+    }
+    fun addTask(){
+        val fields=JSONObject().put("title",state.taskTitle.trim())
+        if(state.taskDay.isNotBlank())fields.put("day",state.taskDay.toIntOrNull()?:-1)
+        dayCommand("task.add",fields)
+    }
+    fun addReminder(){
+        val minute=parseClockMinute(state.reminderTime)?:-1
+        val fields=JSONObject().put("title",state.reminderTitle.trim()).put("minute",minute).put("daily",state.reminderDaily)
+        if(state.reminderDay.isNotBlank())fields.put("day",state.reminderDay.toIntOrNull()?:-1)
+        dayCommand("reminder.add",fields)
+    }
+    fun editDayOptions(change:(AppState)->AppState){state=change(state).copy(dayOptionsDirty=true)}
+    fun saveDayOptions()=work("Guardando opciones del día…"){
+        val minute=parseClockMinute(state.summaryTime)?:throw DeviceFailure("Usa una hora HH:MM válida")
+        val reply=linked().call("agenda.options",JSONObject().put("summaryMinute",minute).put("dailySummary",state.dailySummary).put("scenes",state.scenes))
+        state=state.copy(dayOptionsDirty=false);acceptAdditional(reply);announce("Opciones guardadas")
+    }
+    fun configureTelegram()=work("Guardando Telegram por BLE…"){
+        require(state.bluetooth){"Para guardar el token, conecta MiniPet por BLE cifrado"}
+        val token=state.telegramToken.trim();state=state.copy(telegramToken="")
+        require(token.length in 32..100){"Revisa el token de BotFather"}
+        acceptAdditional(AdditionalClient(linked()).configureTelegram(token))
+        announce("Token guardado. Conecta MiniPet a internet y abre Vincular Telegram en la OLED.")
+    }
+    fun telegramFlag(key: String,value: Boolean)=work("Guardando avisos de Telegram…"){
+        require(key in listOf("enabled","studyAlerts","reminderAlerts","summaryAlerts"))
+        acceptAdditional(linked().call("telegram.settings",JSONObject().put(key,value)));announce("Opciones de Telegram guardadas")
+    }
+    fun clearTelegram()=work("Desvinculando Telegram…"){
+        acceptAdditional(linked().call("telegram.clear"));state=state.copy(telegramToken="");announce("Token y vinculación borrados del ESP32")
     }
     fun discoverWifi(){
         stopDiscovery();state=state.copy(devices=emptyList(),scanning=true,bluetooth=false)

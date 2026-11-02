@@ -56,8 +56,8 @@ bool applySettings(JsonVariantConst json,pet::Settings& s) {
     return s.gestureMaxCm>=s.gestureMinCm+10;
 }
 }
-bool AppService::begin(const pet::Settings& settings,StudyService& study) {
-    study_=&study;
+bool AppService::begin(const pet::Settings& settings,StudyService& study,AgendaService& agenda,TelegramService& telegram) {
+    study_=&study;agenda_=&agenda;telegram_=&telegram;
     settings_=settings;mutex_=xSemaphoreCreateMutex();bleQueue_=xQueueCreate(3,sizeof(BleRequest*));
     bleAck_=xSemaphoreCreateBinary();
     if(!mutex_||!bleQueue_||!bleAck_)return false;
@@ -68,6 +68,8 @@ bool AppService::begin(const pet::Settings& settings,StudyService& study) {
         if(fsReady_)p.putBool("fsReady",true);p.end();
     }
     if(fsReady_)LittleFS.remove("/upload.part");
+    if(!agenda.begin(fsReady_))return false;
+    if(!telegram.begin(study,agenda))return false;
     server_.on("/api/v1/info",HTTP_GET,[this](AsyncWebServerRequest* request){
         JsonDocument doc;doc["name"]="MiniPet";doc["protocol"]=1;doc["width"]=128;doc["height"]=32;
         doc["port"]=8080;doc["maxFrames"]=pet::app::maxFrames;doc["pairing"]=pairing();
@@ -131,16 +133,16 @@ void AppService::read(pet::app::RemoteView& view){
     if(view.type==pet::app::Content::Media&&media_)memcpy(view.frame,media_+pet::app::headerBytes+playback_.frame(now)*512,512);
     xSemaphoreGive(mutex_);
 }
-std::string AppService::dispatch(const std::string& json,const std::string& bearer){
+std::string AppService::dispatch(const std::string& json,const std::string& bearer,bool secureBle){
     JsonDocument input,output;
     if(json.size()>maxJson||deserializeJson(input,json)||!input.is<JsonObject>())return "{\"ok\":false,\"error\":\"Solicitud invalida\"}";
     if(xSemaphoreTake(mutex_,pdMS_TO_TICKS(2000))!=pdTRUE)return "{\"ok\":false,\"error\":\"Ocupado; intenta otra vez\"}";
     if(stopRequested_.exchange(false)){playback_.stop();playingId_.clear();}
     output["ok"]=true;output["req"]=input["req"]|0;
-    execute(input.as<JsonVariantConst>(),output,bearer);xSemaphoreGive(mutex_);
+    execute(input.as<JsonVariantConst>(),output,bearer,secureBle);xSemaphoreGive(mutex_);
     std::string result;serializeJson(output,result);return result;
 }
-void AppService::execute(JsonVariantConst req,JsonDocument& reply,const std::string& bearer){
+void AppService::execute(JsonVariantConst req,JsonDocument& reply,const std::string& bearer,bool secureBle){
     const std::string op=req["op"]|"";
     auto fail=[&](const char* error){reply["ok"]=false;reply["error"]=error;};
     if(op=="pair"){
@@ -159,6 +161,12 @@ void AppService::execute(JsonVariantConst req,JsonDocument& reply,const std::str
     if(!pet::app::sameToken(supplied,token_)){fail("Vinculacion requerida");return;}
     lastContact_=millis();contacted_=true;
     playback_.heartbeat(millis());
+    if(op.rfind("telegram.",0)==0){telegram_->execute(req,reply.as<JsonObject>(),secureBle);return;}
+    if(op.rfind("agenda.",0)==0||op.rfind("task.",0)==0||op.rfind("reminder.",0)==0){
+        agenda_->execute(req,reply.as<JsonObject>());
+        if(reply["ok"].as<bool>()&&op!="agenda.get")interaction_=true;
+        return;
+    }
     const bool studyCommand=op.rfind("study.",0)==0;
     if(localBusy_&&(op=="study.start"||op=="study.resume"||op=="study.skip"||op=="study.configure")){
         fail("Cierra los ajustes de la OLED primero");return;
@@ -176,7 +184,7 @@ void AppService::execute(JsonVariantConst req,JsonDocument& reply,const std::str
     if(op=="ping")return;
     if(op=="status"||op=="settings.get"){
         settingsJson(reply["settings"].to<JsonObject>(),settings_);reply["active"]=playback_.active(millis());
-        reply["storage"]=fsReady_;reply["ip"]=WiFi.localIP().toString();reply["firmware"]="3.1.1";
+        reply["storage"]=fsReady_;reply["ip"]=WiFi.localIP().toString();reply["firmware"]="3.2.0";reply["additional"]=true;
         JsonDocument studyRequest;studyRequest["op"]="study.get";
         study_->execute(studyRequest.as<JsonVariantConst>(),reply.as<JsonObject>());return;
     }
@@ -287,7 +295,7 @@ void AppService::bleWorker(void* self){
         if(xQueueReceive(owner.bleQueue_,&message,portMAX_DELAY)!=pdTRUE)continue;
         const auto generation=message->generation;
         if(generation!=owner.bleGeneration_){delete message;continue;}
-        const auto response=owner.dispatch(message->value)+"\n";delete message;
+        const auto response=owner.dispatch(message->value,"",true)+"\n";delete message;
         const auto peers=owner.bleServer_->getPeerDevices();
         const unsigned mtu=peers.empty()?23:owner.bleServer_->getPeerMTU(peers.front());
         const size_t step=std::min<unsigned>(180,mtu>23?mtu-3:20);
